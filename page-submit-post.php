@@ -3,12 +3,11 @@
  * Template Name: Submit Post
  */
 
-get_header();
+// 在输出任何内容之前检查登录状态
+require_once get_template_directory() . '/inc/user-center-functions.php';
+require_login();
 
-if (!is_user_logged_in()) {
-    wp_redirect(wp_login_url());
-    exit;
-}
+get_header();
 ?>
 
 <div class="site-left-right-container">

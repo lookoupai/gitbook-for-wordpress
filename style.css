@@ -866,3 +866,28 @@ header .search-and-menu .top-menu-btn:hover {
     box-sizing: border-box;
     padding: 20px;
 }
+
+.comment-edit-link {
+    display: inline-block;
+    margin-left: 10px;
+    color: #666;
+    font-size: 0.9em;
+    text-decoration: none;
+}
+
+.comment-edit-link:hover {
+    color: #333;
+    text-decoration: underline;
+}
+
+.comment-metadata {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.comment-awaiting-moderation {
+    color: #d63638;
+    font-style: italic;
+    margin: 5px 0;
+}

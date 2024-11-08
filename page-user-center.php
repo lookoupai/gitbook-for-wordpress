@@ -3,14 +3,14 @@
  * Template Name: User Center
  */
 
+// 在输出任何内容之前检查登录状态
+require_once get_template_directory() . '/inc/user-center-functions.php';
+require_login();
+
 get_header();
 
-if (!is_user_logged_in()) {
-    wp_redirect(wp_login_url());
-    exit;
-}
-
 $current_user = wp_get_current_user();
+$active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'profile';
 ?>
 
 <div class="site-left-right-container">
@@ -28,35 +28,35 @@ $current_user = wp_get_current_user();
                 <p>注册时间：<?php echo date('Y-m-d', strtotime($current_user->user_registered)); ?></p>
             </div>
 
-            <!-- 用户文章列表 -->
-            <div class="user-posts-section">
-                <h3>我的文章</h3>
+            <!-- Tab导航 -->
+            <div class="user-center-tabs">
+                <a href="?tab=profile" class="<?php echo $active_tab === 'profile' ? 'active' : ''; ?>">个人资料</a>
+                <a href="?tab=posts" class="<?php echo $active_tab === 'posts' ? 'active' : ''; ?>">我的文章</a>
+                <a href="?tab=comments" class="<?php echo $active_tab === 'comments' ? 'active' : ''; ?>">我的评论</a>
+                <a href="?tab=favorites" class="<?php echo $active_tab === 'favorites' ? 'active' : ''; ?>">我的收藏</a>
+                <a href="?tab=notifications" class="<?php echo $active_tab === 'notifications' ? 'active' : ''; ?>">消息通知</a>
+            </div>
+
+            <!-- Tab内容区 -->
+            <div class="tab-content">
                 <?php
-                $args = array(
-                    'author' => $current_user->ID,
-                    'post_type' => 'post',
-                    'posts_per_page' => 10
-                );
-                $user_posts = new WP_Query($args);
-                
-                if ($user_posts->have_posts()) :
-                    while ($user_posts->have_posts()) : $user_posts->the_post();
-                ?>
-                    <div class="post-item">
-                        <h4><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h4>
-                        <div class="post-meta">
-                            <span>状态：<?php echo get_post_status(); ?></span>
-                            <a href="<?php echo get_edit_post_link(); ?>" class="edit-link">编辑</a>
-                        </div>
-                    </div>
-                <?php
-                    endwhile;
-                else:
-                ?>
-                    <p>暂无文章</p>
-                <?php
-                endif;
-                wp_reset_postdata();
+                switch ($active_tab) {
+                    case 'profile':
+                        get_template_part('template-parts/user/profile');
+                        break;
+                    case 'posts':
+                        get_template_part('template-parts/user/posts');
+                        break;
+                    case 'comments':
+                        get_template_part('template-parts/user/comments');
+                        break;
+                    case 'favorites':
+                        get_template_part('template-parts/user/favorites');
+                        break;
+                    case 'notifications':
+                        get_template_part('template-parts/user/notifications');
+                        break;
+                }
                 ?>
             </div>
         </div>

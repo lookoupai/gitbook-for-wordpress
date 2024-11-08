@@ -159,4 +159,25 @@ jQuery(document).ready(function($) {
             }
         });
     }
+
+    function markdownToHtml(markdown) {
+        // 基本的 Markdown 转换规则
+        let html = markdown
+            // 代码块
+            .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+            // 行内代码
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            // 粗体
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            // 斜体
+            .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+            // 引用
+            .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+            // 链接
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+            // 换行
+            .replace(/\n/g, '<br>');
+        
+        return html;
+    }
 }); 

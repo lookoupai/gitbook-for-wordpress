@@ -1,47 +1,89 @@
-## 《求和!李姐万岁! GitBook For WordPress》(Modified Version)
+# GitBook For WordPress
 
-这是一个基于[原版主题](https://github.com/zhaoolee/gitbook-for-wordpress)修改的版本，增加了文章标题下显示最后更新时间的功能。
+一个模仿 GitBook 布局，使用锤子便签配色的 WordPress 主题。
 
-![GitBook For WordPress](https://raw.githubusercontent.com/zhaoolee/gitbook-for-wordpress/main/screenshot.jpg)
+## 主要功能
 
-求和! 李姐万岁! 这是一个**GitBook布局，锤子便签风格**的WordPress主题~
+### 1. GitBook 风格布局
+- 左侧文章目录导航
+- 右侧内容区域
+- 响应式设计，支持移动端浏览
 
-## 修改内容
+### 2. 协作编辑功能
+- 允许登录用户编辑任何文章
+- 编辑内容需要管理员审核
+- 保留完整修订历史
+- 支持修改说明
+- 显示待审核状态
 
-- 在文章标题下方添加最后更新时间显示
-- 时间格式：YYYY-MM-DD HH:mm:ss
+### 3. Markdown 支持
+- 文章编辑器支持 Markdown 语法
+- 实时预览渲染效果
+- 工具栏快捷插入 Markdown 语法
+- 评论区也支持 Markdown 语法
 
-## 原主题功能
+### 4. 评论功能
+- 支持 Markdown 语法
+- 评论编辑功能（作者可编辑自己的评论）
+- 评论删除功能（管理员）
+- 编辑后的评论需要重新审核
+- 支持评论嵌套回复
 
-### 独立的顶部菜单和侧边栏菜单
+### 5. 用户中心
+- 个人资料管理
+- 评论管理
+- 投稿管理
+- 编辑历史
 
-主题支持两个独立的菜单位置：
-- Header Menu：显示在顶部导航栏
-- Sidebar Menu：显示在左侧边栏
+### 6. 其他特性
+- 锤子便签风格配色
+- 响应式设计
+- 文章目录自动生成
+- 文章修订历史
+- 待审核内容管理
 
-可以在 WordPress 后台的"外观 > 菜单"中分别设置这两个菜单。
+## 安装使用
 
-### 自定义侧边栏菜单
+1. 下载主题文件
+2. 上传到 WordPress 主题目录 (`wp-content/themes/`)
+3. 在 WordPress 后台启用主题
+4. 根据需要配置主题选项
 
-默认显示自定义菜单，可以在WordPress后台的"外观 > 菜单"中设置。当选择特定分类时，侧边栏会自动切换显示该分类下的所有文章列表。
+## 使用说明
 
-### 侧边栏自动将当前文章滚动到侧边栏顶部
+### 文章编辑
+1. 登录后可以编辑任何文章
+2. 编辑时支持 Markdown 语法
+3. 编辑需要填写修改说明
+4. 提交后等待管理员审核
 
-### 支持按照专题过滤文章列表
+### 评论功能
+1. 支持 Markdown 语法编写评论
+2. 评论作者可以编辑自己的评论
+3. 编辑后的评论需要重新审核
+4. 管理员可以删除任何评论
+5. 支持多级嵌套回复
 
-### 支持宽窄屏自适应
+### 管理员功能
+1. 审核文章编辑
+2. 审核评论编辑
+3. 管理用户权限
+4. 查看修订历史
 
-### 支持锤子便签风格的评论
+## 开发说明
 
-### 支持搜索
+本主题使用以下技术：
+- PHP 7.4+
+- WordPress 5.0+
+- jQuery
+- Bootstrap 5
+- Markdown-it
 
-### 底部预留备案号位置，支持自定义，不填就不显示
+## 许可证
 
-### 支持显示后台菜单
+GPL v2 or later
 
-### 支持小部件
+## 作者
 
-## 原主题作者
-
-- 原主题作者：zhaoolee
-- 原主题GitHub：https://github.com/zhaoolee/gitbook-for-wordpress
+作者：zhaoolee
+博客：[https://zhaoolee.com/](https://zhaoolee.com/)
