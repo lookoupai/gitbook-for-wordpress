@@ -38,6 +38,11 @@ function my_theme_enqueue_scripts()
 {
   // 注册和加载主样式表
   wp_enqueue_style('my-theme-style', get_stylesheet_uri(), array(), wp_get_theme()->get('Version'));
+
+  // 在投稿页面加载 Markdown 编辑器相关文件
+  if (is_page_template('page-submit-post.php')) {
+      wp_enqueue_script('markdown-editor', get_template_directory_uri() . '/js/markdown-editor.js', array('jquery'), time(), true);
+  }
 }
 add_action('wp_enqueue_scripts', 'my_theme_enqueue_scripts');
 
@@ -153,3 +158,65 @@ function github_com_zhaoolee_gitbook_for_wordpress_widgets_init() {
   ) );
 }
 add_action( 'widgets_init', 'github_com_zhaoolee_gitbook_for_wordpress_widgets_init' );
+
+// 添加前端投稿功能
+function add_frontend_submission_form() {
+    if (!is_user_logged_in()) {
+        return;
+    }
+    
+    wp_enqueue_script('markdown-editor', get_template_directory_uri() . '/js/markdown-editor.js', array('jquery'), '1.0', true);
+}
+add_action('wp_enqueue_scripts', 'add_frontend_submission_form');
+
+// 处理文章提交
+function handle_frontend_submission() {
+    if (!isset($_POST['submit_post_nonce']) || !wp_verify_nonce($_POST['submit_post_nonce'], 'submit_post')) {
+        return;
+    }
+
+    $post_data = array(
+        'post_title'    => sanitize_text_field($_POST['post_title']),
+        'post_content'  => wp_kses_post($_POST['post_content']),
+        'post_status'   => 'pending',
+        'post_author'   => get_current_user_id(),
+        'post_type'     => 'post'
+    );
+
+    $post_id = wp_insert_post($post_data);
+
+    if ($post_id) {
+        // 保存文章版本
+        wp_save_post_revision($post_id);
+        
+        // 添加标签和分类
+        if (!empty($_POST['post_tags'])) {
+            wp_set_post_tags($post_id, $_POST['post_tags']);
+        }
+        if (!empty($_POST['post_category'])) {
+            wp_set_post_categories($post_id, $_POST['post_category']);
+        }
+        
+        // 发送邮件通知管理员
+        $admin_email = get_option('admin_email');
+        $subject = '新文章等待审核';
+        $message = sprintf('新文章《%s》等待审核，请登录后台查看。', $_POST['post_title']);
+        wp_mail($admin_email, $subject, $message);
+    }
+}
+add_action('init', 'handle_frontend_submission');
+
+// 添加文章版本控制
+function save_post_version($post_id) {
+    if (wp_is_post_revision($post_id)) {
+        return;
+    }
+    
+    $post = get_post($post_id);
+    if ($post->post_type === 'revision') {
+        return;
+    }
+    
+    wp_save_post_revision($post_id);
+}
+add_action('post_updated', 'save_post_version');
