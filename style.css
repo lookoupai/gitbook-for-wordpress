@@ -51,9 +51,9 @@ header nav #headerMenuModal .modal-content .list-group .list-group-item {
   border: none;
   font-weight: 600;
   color: #635753;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap; /* 使文本在一行内显示，不换行 */
+  overflow: hidden; /* 超出容器宽度的内容将被隐藏 */
+  text-overflow: ellipsis; /* 超出容器宽度的文本将以省略号表示 */
   max-width: 100%;
 }
 header nav #headerMenuModal .modal-content .list-group .list-group-item:hover {
@@ -192,8 +192,8 @@ header .search-and-menu .top-menu-btn:hover {
   overflow: scroll;
   padding-top: 24px;
   padding-bottom: 24px;
-  word-wrap: break-word;
-  white-space: normal;
+  word-wrap: break-word; /* 允许在单词内换行 */
+  white-space: normal; /* 让文本自然换行并合并多个空格 */
   line-height: 2;
   background-color: #fbf7ee !important;
 }
@@ -203,15 +203,8 @@ header .search-and-menu .top-menu-btn:hover {
 .right-content .post-content {
   overflow-x: scroll;
 }
-.right-content .post-content .last-updated {
-  color: #666;
-  font-size: 14px;
-  margin: 10px 0 20px 0;
-  line-height: 1.5;
-}
 .right-content h2 {
   line-height: 2;
-  margin-bottom: 10px;
 }
 .right-content img {
   max-width: 100%;
