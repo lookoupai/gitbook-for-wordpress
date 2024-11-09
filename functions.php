@@ -635,7 +635,7 @@ add_action('widgets_init', function() {
 // 添加文章状态标签
 function get_post_status_label($status) {
     $status_labels = array(
-        'publish' => '已发布',
+        'publish' => '已发',
         'pending' => '待审核',
         'draft' => '草稿',
         'pending-revision' => '改待审核',
@@ -891,7 +891,7 @@ function display_pending_revisions_page() {
                     <tr>
                         <th>原文章</th>
                         <th>修改者</th>
-                        <th>修改时间</th>
+                        <th>修时间</th>
                         <th>修改说明</th>
                         <th>操作</th>
                     </tr>
@@ -1034,7 +1034,7 @@ function ajax_get_revision_diff_admin() {
 }
 add_action('wp_ajax_get_revision_diff_admin', 'ajax_get_revision_diff_admin');
 
-// 添加一个函数来获取文章的最后更新时间
+// 添加一个函数获取文章的最后更新时间
 function get_last_update_time($post = null) {
     if (!$post) {
         global $post;
@@ -1118,7 +1118,7 @@ function ajax_edit_comment() {
         // 获取评论
         $comment = get_comment($comment_id);
 
-        // 检查评论是否存在
+        // 检查评论是否存
         if (!$comment) {
             error_log('Comment edit: Comment not found - ID: ' . $comment_id);
             wp_send_json_error('评论不存在');
@@ -1211,7 +1211,7 @@ function custom_comment_form_defaults($defaults) {
         <p class="comment-form-comment">
             <label for="comment">评论内容</label>
             <div class="markdown-toolbar">
-                <button type="button" onclick="insertMarkdown(\'**\', \'**\', \'粗体文本\')" title="粗体">B</button>
+                <button type="button" onclick="insertMarkdown(\'**\', \'**\', \'粗体文本\')" title="粗">B</button>
                 <button type="button" onclick="insertMarkdown(\'*\', \'*\', \'斜体文本\')" title="斜体">I</button>
                 <button type="button" onclick="insertMarkdown(\'`\', \'`\', \'代码\')" title="代码">Code</button>
                 <button type="button" onclick="insertMarkdown(\'\\n```\\n\', \'\\n```\\n\', \'代码块\')" title="代码块">CodeBlock</button>
@@ -1406,3 +1406,127 @@ function add_markdown_styles() {
     }
 }
 add_action('wp_head', 'add_markdown_styles');
+
+function add_login_register_styles() {
+    // 添加 page-lost-password.php 模板
+    if (is_page_template('page-login.php') || 
+        is_page_template('page-register.php') || 
+        is_page_template('page-lost-password.php')) {
+        wp_enqueue_style('login-register-styles', get_template_directory_uri() . '/assets/css/login-register.css');
+        // 添加导航菜单样式
+        wp_enqueue_style('nav-menu-styles', get_template_directory_uri() . '/style.css');
+    }
+}
+add_action('wp_enqueue_scripts', 'add_login_register_styles');
+
+// 创建登录和注册页面
+function create_login_register_pages() {
+    // 检查用户中心页面
+    if (!get_page_by_path('user-center')) {
+        wp_insert_post(array(
+            'post_title'    => '用户中心',
+            'post_name'     => 'user-center',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'page_template' => 'page-user-center.php'
+        ));
+    }
+
+    // 检查登录页面
+    if (!get_page_by_path('login')) {
+        wp_insert_post(array(
+            'post_title'    => '登录',
+            'post_name'     => 'login',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'page_template' => 'page-login.php'
+        ));
+    }
+    
+    // 检查注册页面
+    if (!get_page_by_path('register')) {
+        wp_insert_post(array(
+            'post_title'    => '注册',
+            'post_name'     => 'register',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'page_template' => 'page-register.php'
+        ));
+    }
+    
+    // 检查忘记密码页面
+    if (!get_page_by_path('lost-password')) {
+        wp_insert_post(array(
+            'post_title'    => '忘记密码',
+            'post_name'     => 'lost-password',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'page_template' => 'page-lost-password.php'
+        ));
+    }
+}
+add_action('after_switch_theme', 'create_login_register_pages');
+
+// 修改默认的登录URL
+function custom_login_url($login_url) {
+    $login_page = get_page_by_path('login');
+    return $login_page ? get_permalink($login_page) : $login_url;
+}
+add_filter('login_url', 'custom_login_url', 10, 1);
+
+// 修改默认的注册URL
+function custom_register_url($register_url) {
+    $register_page = get_page_by_path('register');
+    return $register_page ? get_permalink($register_page) : $register_url;
+}
+add_filter('register_url', 'custom_register_url', 10, 1);
+
+// 添加修改忘记密码URL的函数
+function custom_lostpassword_url($lostpassword_url) {
+    $lostpassword_page = get_page_by_path('lost-password');
+    return $lostpassword_page ? get_permalink($lostpassword_page) : $lostpassword_url;
+}
+add_filter('lostpassword_url', 'custom_lostpassword_url', 10, 1);
+
+// 修改密码重置邮件中的链接
+function custom_password_reset_url($url, $key, $user_login) {
+    $lostpassword_page = get_page_by_path('lost-password');
+    if ($lostpassword_page) {
+        $url = add_query_arg(
+            array(
+                'action' => 'rp',
+                'key' => $key,
+                'login' => rawurlencode($user_login)
+            ),
+            get_permalink($lostpassword_page)
+        );
+    }
+    return $url;
+}
+add_filter('retrieve_password_url', 'custom_password_reset_url', 10, 3);
+
+// 添加用户中心访问限制和重定向
+function check_user_center_access() {
+    if (is_page('user-center') && !is_user_logged_in()) {
+        $login_page = get_page_by_path('login');
+        if ($login_page) {
+            wp_redirect(add_query_arg('redirect_to', urlencode(get_permalink(get_page_by_path('user-center'))), get_permalink($login_page)));
+            exit;
+        }
+    }
+}
+add_action('template_redirect', 'check_user_center_access');
+
+// 添加到现有的 functions.php 中
+function ensure_correct_encoding() {
+    header('Content-Type: text/html; charset=utf-8');
+    // 禁用缓存
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Cache-Control: post-check=0, pre-check=0', false);
+    header('Pragma: no-cache');
+}
+add_action('template_redirect', 'ensure_correct_encoding');
