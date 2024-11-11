@@ -1,4 +1,7 @@
 <?php
+// 在文件开头添加这行代码，确保user-center-functions.php始终被加载
+require_once get_template_directory() . '/inc/user-center-functions.php';
+
 // 设置主题默认特性
 function my_theme_setup()
 {
@@ -11,8 +14,8 @@ function my_theme_setup()
   // 注册导航菜单
   register_nav_menus(
     array(
-      'primary' => 'Header Menu', // 修改为顶部菜单
-      'sidebar' => 'Sidebar Menu'  // 新增侧边栏菜单
+      'primary' => __('顶部菜单', 'your-theme-text-domain'),  // 顶部主菜单
+      'sidebar' => __('侧边栏菜单', 'your-theme-text-domain') // 侧边栏菜单
     )
   );
 
@@ -34,20 +37,39 @@ function my_theme_setup()
 add_action('after_setup_theme', 'my_theme_setup');
 
 // 将样式表和脚本加入到队列中
-function my_theme_enqueue_scripts()
-{
-  // 注册和加载主样式表
-  wp_enqueue_style('my-theme-style', get_stylesheet_uri(), array(), wp_get_theme()->get('Version'));
+function my_theme_enqueue_scripts() {
+    // 注册和加载主样式表
+    wp_enqueue_style('my-theme-style', get_stylesheet_uri(), array(), wp_get_theme()->get('Version'));
 
-  // 在投稿页面加载 Markdown 编辑器相关文件
-  if (is_page_template('page-submit-post.php')) {
-      wp_enqueue_script('markdown-editor', get_template_directory_uri() . '/js/markdown-editor.js', array('jquery'), time(), true);
-  }
+    // 注册Bootstrap CSS文件
+    wp_register_style('bootstrap', get_template_directory_uri() . '/css/bootstrap.min.css', array(), '5.3.0');
+    wp_enqueue_style('bootstrap');
 
-  // 在有评论的页面加载 Markdown 编辑器
-  if (is_singular() && comments_open()) {
-      wp_enqueue_script('markdown-editor', get_template_directory_uri() . '/js/markdown-editor.js', array('jquery'), time(), true);
-  }
+    // 注册Bootstrap JavaScript文件
+    wp_register_script('bootstrap', get_template_directory_uri() . '/js/bootstrap.min.js', array('jquery'), '5.3.0', true);
+    wp_enqueue_script('bootstrap');
+
+    // 注册自定义脚本
+    wp_register_script('custom-scripts', get_template_directory_uri() . '/js/custom-scroll-sidebar-scripts.js', array('jquery'), '1.0.0', true);
+    wp_enqueue_script('custom-scripts');
+
+    // 注册search-form.js
+    wp_register_script('search-form', get_template_directory_uri() . '/search-form.js', array(), '1.0', true);
+    wp_enqueue_script('search-form');
+
+    // 注册导航菜单样式
+    wp_enqueue_style('nav-menu-styles', get_template_directory_uri() . '/assets/css/nav-menu.css');
+
+    // 在登录和注册页面加载相关样式
+    if (is_page_template(array('page-login.php', 'page-register.php', 'page-lost-password.php'))) {
+        wp_enqueue_style('login-register-styles', get_template_directory_uri() . '/assets/css/login-register.css');
+    }
+
+    // 在编辑页面加载相关资源
+    if (is_page_template('page-edit-post.php')) {
+        wp_enqueue_script('markdown-it', 'https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js', array(), null, true);
+        wp_enqueue_style('edit-post-style', get_template_directory_uri() . '/assets/css/edit-post.css');
+    }
 }
 add_action('wp_enqueue_scripts', 'my_theme_enqueue_scripts');
 
@@ -396,7 +418,7 @@ function custom_comment_template($comment, $args, $depth) {
         }
 
         function cancelEdit(commentId) {
-            // 取消编辑
+            // 取编辑
             document.getElementById('comment-content-' + commentId).style.display = 'block';
             document.getElementById('comment-edit-form-' + commentId).style.display = 'none';
         }
@@ -443,7 +465,7 @@ function custom_comment_template($comment, $args, $depth) {
                         error: error,
                         xhr: xhr.responseText
                     });
-                    alert('更新失败，请稍后重试。\n错误信息：' + error + '\n状态：' + xhr.status + '\n响应：' + xhr.responseText);
+                    alert('更新失请稍重试。\n错误信息：' + error + '\n状态：' + xhr.status + '\n响应：' + xhr.responseText);
                 }
             });
         }
@@ -479,7 +501,7 @@ function custom_comment_template($comment, $args, $depth) {
     }
 }
 
-// 添加 Markdown 预览功能
+// 加 Markdown 预览功能
 function ajax_preview_markdown_comment() {
     check_ajax_referer('preview-comment', 'nonce');
     
@@ -503,7 +525,7 @@ function handle_comment_submission($comment_ID, $comment_approved, $commentdata)
 
     require_once get_template_directory() . '/inc/user-center-functions.php';
 
-    // 如果是回复评论，通知原评论作者
+    // 如果是回复评论通知原评论作者
     if ($commentdata['comment_parent']) {
         $parent_comment = get_comment($commentdata['comment_parent']);
         if ($parent_comment && $parent_comment->user_id) {
@@ -706,7 +728,7 @@ add_action('wp_ajax_get_revision_diff', 'ajax_get_revision_diff');
 // 处理文章编辑提交
 function handle_post_edit() {
     if (!isset($_POST['edit_post_nonce']) || !wp_verify_nonce($_POST['edit_post_nonce'], 'edit_post')) {
-        wp_die('安全验证失败');
+        wp_die('安全验证败');
     }
 
     require_once get_template_directory() . '/inc/user-center-functions.php';
@@ -749,7 +771,7 @@ function handle_post_edit() {
             );
         }
 
-        // 通知编辑者
+        // 通知编者
         add_user_notification(
             get_current_user_id(),
             sprintf('您对文章《%s》的修改已提交，等待管理员审核。', $post->post_title),
@@ -988,7 +1010,7 @@ function display_pending_revisions_page() {
     <?php
 }
 
-// 添加AJAX处理差异对比
+// 添加AJAX处理差异对
 function ajax_get_revision_diff_admin() {
     check_admin_referer('revision-diff-nonce', 'nonce');
     
@@ -1040,7 +1062,7 @@ function get_last_update_time($post = null) {
         global $post;
     }
     
-    // 获取最新的已批准修订版本
+    // 获取最新的已批准修订版
     $revisions = wp_get_post_revisions($post->ID, array(
         'posts_per_page' => 1,
         'orderby' => 'post_modified',
@@ -1057,7 +1079,7 @@ function get_last_update_time($post = null) {
     return get_the_modified_time('Y-m-d H:i:s', $post);
 }
 
-// 修改文章元信息的显示
+// 修改章元信息的显示
 function display_post_meta($post) {
     $update_time = get_last_update_time($post);
     echo sprintf(
@@ -1118,7 +1140,7 @@ function ajax_edit_comment() {
         // 获取评论
         $comment = get_comment($comment_id);
 
-        // 检查评论是否存
+        // 检查评论是否存在
         if (!$comment) {
             error_log('Comment edit: Comment not found - ID: ' . $comment_id);
             wp_send_json_error('评论不存在');
@@ -1128,7 +1150,7 @@ function ajax_edit_comment() {
         // 检查用户权限
         if (!is_user_logged_in()) {
             error_log('Comment edit: User not logged in');
-            wp_send_json_error('请先登录');
+            wp_send_json_error('先登录');
             return;
         }
 
@@ -1320,7 +1342,7 @@ function render_comment_markdown($content) {
                             breaks: true
                         });
 
-                        // 渲染所有评论内容
+                        // 渲染所有评论内
                         document.querySelectorAll('.comment-content').forEach(function(element) {
                             const originalContent = element.textContent.trim();
                             if (originalContent) {
@@ -1530,3 +1552,358 @@ function ensure_correct_encoding() {
     header('Pragma: no-cache');
 }
 add_action('template_redirect', 'ensure_correct_encoding');
+
+// 添加自定义注册处
+function custom_registration_function() {
+    if (isset($_POST['wp-submit'])) {
+        $user_login = sanitize_user($_POST['user_login']);
+        $user_email = sanitize_email($_POST['user_email']);
+        $user_pass = $_POST['user_pass'];
+        $pass_confirm = $_POST['user_pass_confirm'];
+
+        // 验证密码
+        if ($user_pass !== $pass_confirm) {
+            wp_die('密码不匹配，请重试');
+        }
+
+        // 创建新用户
+        $userdata = array(
+            'user_login' => $user_login,
+            'user_email' => $user_email,
+            'user_pass' => $user_pass,
+            'role' => 'subscriber'
+        );
+
+        $user_id = wp_insert_user($userdata);
+
+        if (!is_wp_error($user_id)) {
+            // 自动登录用户
+            wp_set_current_user($user_id);
+            wp_set_auth_cookie($user_id);
+            
+            // 重定向到首页或用户中心
+            wp_redirect(home_url('/user-center'));
+            exit;
+        } else {
+            wp_die($user_id->get_error_message());
+        }
+    }
+}
+add_action('login_form_register', 'custom_registration_function');
+
+// 禁用新用户注册邮件通知
+add_filter('wp_new_user_notification_email', '__return_false');
+add_filter('wp_new_user_notification_email_admin', '__return_false');
+
+// 在functions.php中添加以下函数来自动创建编辑页面
+function create_edit_post_page() {
+    // 检查编辑页面是否存在
+    if (!get_page_by_path('edit-post')) {
+        // 创建编辑页面
+        wp_insert_post(array(
+            'post_title'    => '编辑文章',
+            'post_name'     => 'edit-post',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'post_author'   => 1,
+            'page_template' => 'page-edit-post.php'
+        ));
+    }
+}
+add_action('after_switch_theme', 'create_edit_post_page');
+
+// 在functions.php中添加以下代码
+function add_edit_post_assets() {
+    if (is_page_template('page-edit-post.php')) {
+        // 添加 Markdown-it
+        wp_enqueue_script('markdown-it', 'https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js', array(), null, true);
+        
+        // 添加编辑器样式
+        wp_enqueue_style('edit-post-style', get_template_directory_uri() . '/assets/css/edit-post.css');
+        
+        // 添加自定义编辑器脚本
+        wp_enqueue_script('edit-post-script', get_template_directory_uri() . '/assets/js/edit-post.js', array('jquery', 'markdown-it'), null, true);
+    }
+}
+add_action('wp_enqueue_scripts', 'add_edit_post_assets');
+
+// 在functions.php中添加自动创建投稿页面的函数
+function create_theme_pages() {
+    // 创建编辑页面
+    if (!get_page_by_path('edit-post')) {
+        wp_insert_post(array(
+            'post_title'    => '编辑文章',
+            'post_name'     => 'edit-post',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'post_author'   => 1,
+            'page_template' => 'page-edit-post.php'
+        ));
+    }
+
+    // 创建投稿页面
+    if (!get_page_by_path('submit-post')) {
+        wp_insert_post(array(
+            'post_title'    => '投稿',
+            'post_name'     => 'submit-post',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'post_author'   => 1,
+            'page_template' => 'page-submit-post.php'
+        ));
+    }
+
+    // 创建其他页面（登录、注册等）
+    if (!get_page_by_path('login')) {
+        wp_insert_post(array(
+            'post_title'    => '登录',
+            'post_name'     => 'login',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'post_author'   => 1,
+            'page_template' => 'page-login.php'
+        ));
+    }
+    
+    if (!get_page_by_path('register')) {
+        wp_insert_post(array(
+            'post_title'    => '注册',
+            'post_name'     => 'register',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'post_author'   => 1,
+            'page_template' => 'page-register.php'
+        ));
+    }
+    
+    if (!get_page_by_path('lost-password')) {
+        wp_insert_post(array(
+            'post_title'    => '忘记密码',
+            'post_name'     => 'lost-password',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'post_author'   => 1,
+            'page_template' => 'page-lost-password.php'
+        ));
+    }
+
+    if (!get_page_by_path('user-center')) {
+        wp_insert_post(array(
+            'post_title'    => '用户中心',
+            'post_name'     => 'user-center',
+            'post_status'   => 'publish',
+            'post_type'     => 'page',
+            'post_content'  => '',
+            'post_author'   => 1,
+            'page_template' => 'page-user-center.php'
+        ));
+    }
+}
+
+// 将所有页面创建整合到一个钩子中
+add_action('after_switch_theme', 'create_theme_pages');
+
+// 删除之前分散的页面创建函数
+remove_action('after_switch_theme', 'create_edit_post_page');
+remove_action('after_switch_theme', 'create_login_register_pages');
+remove_action('after_switch_theme', 'create_comment_edit_page');
+
+// 修改投稿处理函数，优化性能
+function ajax_handle_post_submission() {
+    global $wpdb;
+    
+    // 验证和检查
+    if (!isset($_POST['submit_post_nonce']) || !wp_verify_nonce($_POST['submit_post_nonce'], 'submit_post')) {
+        wp_send_json_error(array('message' => '安全验证失败'));
+        exit;
+    }
+
+    if (!is_user_logged_in()) {
+        wp_send_json_error(array('message' => '请先登录'));
+        exit;
+    }
+
+    try {
+        // 预处理数据
+        $title = sanitize_text_field($_POST['post_title']);
+        $content = wp_kses_post($_POST['post_content']);
+        $category = !empty($_POST['cat']) ? intval($_POST['cat']) : 0;
+        $tags = !empty($_POST['post_tags']) ? sanitize_text_field($_POST['post_tags']) : '';
+        $current_user_id = get_current_user_id();
+
+        // 使用事务处理文章提交
+        $wpdb->query('START TRANSACTION');
+
+        // 1. 快速插入文章
+        $post_data = array(
+            'post_title'    => $title,
+            'post_content'  => $content,
+            'post_status'   => 'pending',
+            'post_author'   => $current_user_id,
+            'post_type'     => 'post'
+        );
+
+        $post_id = wp_insert_post($post_data, true);
+
+        if (is_wp_error($post_id)) {
+            throw new Exception($post_id->get_error_message());
+        }
+
+        // 2. 设置分类和标签
+        if ($category) {
+            wp_set_post_categories($post_id, array($category));
+        }
+        if ($tags) {
+            wp_set_post_tags($post_id, $tags);
+        }
+
+        // 3. 提交事务
+        $wpdb->query('COMMIT');
+
+        // 4. 异步处理通知
+        wp_schedule_single_event(time(), 'process_post_submission_notifications', array(
+            'post_id' => $post_id,
+            'title' => $title,
+            'author_id' => $current_user_id
+        ));
+
+        // 5. 返回成功响应
+        wp_send_json_success(array(
+            'message' => '文章提交成功，等待审核',
+            'redirect_url' => home_url('/user-center?submitted=1')
+        ));
+
+    } catch (Exception $e) {
+        $wpdb->query('ROLLBACK');
+        wp_send_json_error(array(
+            'message' => '投稿失败：' . $e->getMessage()
+        ));
+    }
+    exit;
+}
+
+// 添加AJAX处理钩子
+add_action('wp_ajax_handle_post_submission', 'ajax_handle_post_submission');
+
+// 添加页面加载优化
+function optimize_post_pages() {
+    if (is_page_template(['page-submit-post.php', 'page-edit-post.php'])) {
+        // 确保加载jQuery
+        wp_enqueue_script('jquery');
+        
+        // 移除不必要的资源
+        wp_dequeue_style('wp-block-library');
+        wp_dequeue_style('wp-block-library-theme');
+        wp_dequeue_style('wc-block-style');
+        wp_dequeue_style('global-styles');
+        
+        // 预加载必要资源
+        add_action('wp_head', function() {
+            ?>
+            <link rel="preload" href="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js" as="script">
+            <link rel="preconnect" href="https://cdn.jsdelivr.net">
+            <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+            <?php
+        });
+
+        // 延迟加载非关键JavaScript
+        add_filter('script_loader_tag', function($tag, $handle) {
+            if (!in_array($handle, ['jquery', 'markdown-it'])) {
+                return str_replace(' src', ' defer src', $tag);
+            }
+            return $tag;
+        }, 10, 2);
+    }
+}
+add_action('wp_enqueue_scripts', 'optimize_post_pages', 100);
+
+// 添加投稿处理函数
+function handle_post_submission() {
+    // 验证nonce
+    if (!isset($_POST['submit_post_nonce']) || !wp_verify_nonce($_POST['submit_post_nonce'], 'submit_post')) {
+        wp_die('安全验证失败');
+    }
+
+    if (!is_user_logged_in()) {
+        wp_die('请先登录');
+    }
+
+    // 获取表单数据
+    $title = sanitize_text_field($_POST['post_title']);
+    $content = wp_kses_post($_POST['post_content']);
+    $category = !empty($_POST['cat']) ? intval($_POST['cat']) : 0;
+    $tags = !empty($_POST['post_tags']) ? sanitize_text_field($_POST['post_tags']) : '';
+
+    // 创建文章
+    $post_data = array(
+        'post_title'    => $title,
+        'post_content'  => $content,
+        'post_status'   => 'pending',
+        'post_author'   => get_current_user_id(),
+        'post_type'     => 'post'
+    );
+
+    // 插入文章
+    $post_id = wp_insert_post($post_data);
+
+    if (!is_wp_error($post_id)) {
+        // 设置分类
+        if ($category) {
+            wp_set_post_categories($post_id, array($category));
+        }
+        // 设置标签
+        if ($tags) {
+            wp_set_post_tags($post_id, $tags);
+        }
+
+        // 异步处理通知
+        wp_schedule_single_event(time(), 'process_post_submission_notifications', array(
+            'post_id' => $post_id,
+            'title' => $title,
+            'author_id' => get_current_user_id()
+        ));
+
+        // 直接重定向到成功页面
+        wp_redirect(add_query_arg('submitted', '1', get_permalink(get_page_by_path('submit-post'))));
+        exit;
+    } else {
+        wp_die('投稿失败：' . $post_id->get_error_message());
+    }
+}
+add_action('admin_post_submit_post', 'handle_post_submission');
+
+// 添加标记通知已读的AJAX处理
+function ajax_mark_notification_read() {
+    check_ajax_referer('user-notification-nonce', 'nonce');
+    
+    $index = intval($_POST['index']);
+    $user_id = get_current_user_id();
+    
+    if (mark_notification_as_read($user_id, $index)) {
+        wp_send_json_success();
+    } else {
+        wp_send_json_error('标记已读失败');
+    }
+}
+add_action('wp_ajax_mark_notification_read', 'ajax_mark_notification_read');
+
+// 添加删除通知的AJAX处理
+function ajax_delete_notification() {
+    check_ajax_referer('user-notification-nonce', 'nonce');
+    
+    $index = intval($_POST['index']);
+    $user_id = get_current_user_id();
+    
+    if (delete_user_notification($user_id, $index)) {
+        wp_send_json_success();
+    } else {
+        wp_send_json_error('删除失败');
+    }
+}
+add_action('wp_ajax_delete_notification', 'ajax_delete_notification');

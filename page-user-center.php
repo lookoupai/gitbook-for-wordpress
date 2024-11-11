@@ -66,7 +66,57 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'profile
                             get_template_part('template-parts/user/profile');
                             break;
                         case 'posts':
-                            get_template_part('template-parts/user/posts');
+                            // 显示提交成功的提示
+                            if (isset($_GET['submitted']) && $_GET['submitted'] == '1') {
+                                echo '<div class="notice notice-success"><p>文章提交成功，等待审核。</p></div>';
+                            }
+
+                            // 获取用户的文章
+                            $args = array(
+                                'author' => get_current_user_id(),
+                                'post_type' => 'post',
+                                'post_status' => array('publish', 'pending', 'draft'),
+                                'posts_per_page' => 10,
+                                'paged' => get_query_var('paged') ? get_query_var('paged') : 1
+                            );
+                            
+                            $user_posts = new WP_Query($args);
+                            
+                            if ($user_posts->have_posts()) :
+                                echo '<div class="user-posts-list">';
+                                while ($user_posts->have_posts()) : $user_posts->the_post();
+                                    ?>
+                                    <div class="post-item">
+                                        <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
+                                        <div class="post-meta">
+                                            <span class="post-date"><?php echo get_the_date(); ?></span>
+                                            <span class="post-status">状态：<?php echo get_post_status_label(get_post_status()); ?></span>
+                                        </div>
+                                        <div class="post-actions">
+                                            <a href="<?php echo esc_url(add_query_arg('post_id', get_the_ID(), home_url('/edit-post'))); ?>" class="edit-link">编辑</a>
+                                            <?php if (current_user_can('delete_post', get_the_ID())): ?>
+                                                <a href="<?php echo get_delete_post_link(); ?>" class="delete-link" onclick="return confirm('确定要删除这篇文章吗？');">删除</a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <?php
+                                endwhile;
+                                echo '</div>';
+                                
+                                // 添加分页
+                                echo '<div class="pagination">';
+                                echo paginate_links(array(
+                                    'total' => $user_posts->max_num_pages,
+                                    'current' => max(1, get_query_var('paged')),
+                                    'prev_text' => '&laquo; 上一页',
+                                    'next_text' => '下一页 &raquo;'
+                                ));
+                                echo '</div>';
+                                
+                                wp_reset_postdata();
+                            else:
+                                echo '<p>暂无文章</p>';
+                            endif;
                             break;
                         case 'comments':
                             get_template_part('template-parts/user/comments');

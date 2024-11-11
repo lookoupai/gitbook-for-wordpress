@@ -16,39 +16,42 @@ get_header();
         <?php require 'left-sidebar-pc.php'; ?>
         <?php require 'left-sidebar-mobile.php'; ?>
     </div>
+    
     <main id="main" class="site-main right-content">
-        <div class="register-container">
-            <h2>新用户注册</h2>
+        <div class="login-register-container">
+            <h1>新用户注册</h1>
             
-            <?php if (isset($_GET['register']) && $_GET['register'] == 'failed'): ?>
-                <div class="error-message">
-                    注册失败，请重试。
-                </div>
-            <?php endif; ?>
-            
-            <form action="<?php echo esc_url(site_url('wp-login.php?action=register', 'login_post')); ?>" method="post">
-                <div class="form-group">
+            <form name="registerform" id="registerform" action="<?php echo esc_url(site_url('wp-login.php?action=register', 'login_post')); ?>" method="post">
+                <p>
                     <label for="user_login">用户名</label>
-                    <input type="text" name="user_login" id="user_login" required>
-                </div>
+                    <input type="text" name="user_login" id="user_login" class="input" required />
+                </p>
                 
-                <div class="form-group">
+                <p>
                     <label for="user_email">电子邮箱</label>
-                    <input type="email" name="user_email" id="user_email" required>
-                </div>
-                
-                <input type="hidden" name="redirect_to" value="<?php echo esc_url(home_url()); ?>">
-                <button type="submit">注册</button>
+                    <input type="email" name="user_email" id="user_email" class="input" required />
+                </p>
+
+                <p>
+                    <label for="user_pass">密码</label>
+                    <input type="password" name="user_pass" id="user_pass" class="input" required />
+                </p>
+
+                <p>
+                    <label for="user_pass_confirm">确认密码</label>
+                    <input type="password" name="user_pass_confirm" id="user_pass_confirm" class="input" required />
+                </p>
+
+                <p class="submit">
+                    <input type="submit" name="wp-submit" id="wp-submit" class="button button-primary" value="注册" />
+                </p>
             </form>
-            
-            <div class="additional-links">
-                <?php 
-                $login_page = get_page_by_path('login');
-                $login_url = $login_page ? get_permalink($login_page) : wp_login_url();
-                ?>
-                <a href="<?php echo esc_url($login_url); ?>">已有账号？立即登录</a>
-            </div>
+
+            <p class="nav">
+                已有账号? <a href="<?php echo wp_login_url(); ?>">立即登录</a>
+            </p>
         </div>
+        
         <?php require 'footer-container.php' ?>
     </main>
 </div>

@@ -3,36 +3,60 @@ if (!defined('ABSPATH')) exit;
 
 /**
  * 添加用户通知
- * 
- * @param int $user_id 接收通知的用户ID
- * @param string $message 通知消息
- * @param string $type 通知类型
- * @return bool
  */
 function add_user_notification($user_id, $message, $type = 'info') {
-    global $wpdb;
+    $notifications = get_user_meta($user_id, 'user_notifications', true);
+    if (!is_array($notifications)) {
+        $notifications = array();
+    }
     
-    $table_name = $wpdb->prefix . 'user_notifications';
-    
-    $result = $wpdb->insert(
-        $table_name,
-        array(
-            'user_id' => $user_id,
-            'message' => $message,
-            'type' => $type,
-            'created_at' => current_time('mysql'),
-            'is_read' => 0
-        ),
-        array(
-            '%d',
-            '%s',
-            '%s',
-            '%s',
-            '%d'
-        )
+    $notifications[] = array(
+        'message' => $message,
+        'type' => $type,
+        'time' => current_time('mysql'),
+        'read' => false
     );
     
-    return $result !== false;
+    update_user_meta($user_id, 'user_notifications', $notifications);
+}
+
+// 检查用户登录状态
+function require_login() {
+    if (!is_user_logged_in()) {
+        wp_redirect(wp_login_url(get_permalink()));
+        exit;
+    }
+}
+
+// 获取用户通知
+function get_user_notifications($user_id) {
+    $notifications = get_user_meta($user_id, 'user_notifications', true);
+    if (!is_array($notifications)) {
+        return array();
+    }
+    return $notifications;
+}
+
+// 标记通知为已读
+function mark_notification_as_read($user_id, $notification_index) {
+    $notifications = get_user_notifications($user_id);
+    if (isset($notifications[$notification_index])) {
+        $notifications[$notification_index]['read'] = true;
+        update_user_meta($user_id, 'user_notifications', $notifications);
+        return true;
+    }
+    return false;
+}
+
+// 删除通知
+function delete_user_notification($user_id, $notification_index) {
+    $notifications = get_user_notifications($user_id);
+    if (isset($notifications[$notification_index])) {
+        array_splice($notifications, $notification_index, 1);
+        update_user_meta($user_id, 'user_notifications', $notifications);
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -190,77 +214,6 @@ function get_custom_avatar($avatar, $id_or_email, $size, $default, $alt) {
     return $avatar;
 }
 add_filter('get_avatar', 'get_custom_avatar', 10, 5);
-
-// 添加登录检查函数
-function require_login() {
-    if (!is_user_logged_in()) {
-        $current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
-        $login_url = wp_login_url($current_url);
-        
-        // 输出登录提示页面
-        ?>
-        <!DOCTYPE html>
-        <html <?php language_attributes(); ?>>
-        <head>
-            <meta charset="<?php bloginfo('charset'); ?>">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>请登录 - <?php bloginfo('name'); ?></title>
-            <?php wp_head(); ?>
-            <style>
-                .login-notice {
-                    max-width: 600px;
-                    margin: 100px auto;
-                    padding: 30px;
-                    text-align: center;
-                    background: #fff;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }
-                .login-notice h2 {
-                    color: #333;
-                    margin-bottom: 20px;
-                }
-                .login-notice p {
-                    color: #666;
-                    margin-bottom: 20px;
-                }
-                .login-button {
-                    display: inline-block;
-                    padding: 10px 20px;
-                    background: #0073aa;
-                    color: #fff !important;
-                    text-decoration: none;
-                    border-radius: 4px;
-                    transition: background 0.3s;
-                }
-                .login-button:hover {
-                    background: #005177;
-                }
-                .register-link {
-                    display: block;
-                    margin-top: 15px;
-                    color: #666;
-                }
-            </style>
-        </head>
-        <body <?php body_class(); ?>>
-            <div class="login-notice">
-                <h2>需要登��</h2>
-                <p>请登录后继续访问</p>
-                <a href="<?php echo esc_url($login_url); ?>" class="login-button">立即登录</a>
-                <?php if (get_option('users_can_register')) : ?>
-                    <a href="<?php echo esc_url(wp_registration_url()); ?>" class="register-link">
-                        还没有账号？立即注册
-                    </a>
-                <?php endif; ?>
-            </div>
-            <?php wp_footer(); ?>
-        </body>
-        </html>
-        <?php
-        exit;
-    }
-}
 
 // 处理协作编辑提交
 function handle_collaborative_edit() {
