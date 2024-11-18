@@ -5,20 +5,35 @@
 主题文件结构： 
 
 theme-root/
+
 ├── inc/ # 功能模块目录
+
 │ ├── notifications.php # 通知系统
+
 │ ├── user-center-functions.php # 用户中心功能
+
 │ ├── post-submission.php # 文章投稿功能
+
 │ ├── post-editing.php # 文章编辑功能
+
 │ ├── voting-functions.php # 投票系统功能
+
 │ ├── voting-settings.php # 投票系统设置
+
 │ └── comments.php # 评论系统功能
+
 ├── assets/
+
 │ ├── css/
+
 │ │ ├── menu.css # 菜单样式
+
 │ │ └── voting.css # 投票页面样式
+
 │ └── js/
+
 │ └── voting.js # 投票功能脚本
+
 └── functions.php # 主题核心功能和模块加载
 
 

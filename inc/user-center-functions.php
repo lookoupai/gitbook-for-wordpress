@@ -127,3 +127,22 @@ function get_custom_avatar($avatar, $id_or_email, $size, $default, $alt) {
     return $avatar;
 }
 add_filter('get_avatar', 'get_custom_avatar', 10, 5);
+
+/**
+ * 获取文章状态的中文标签
+ */
+function get_post_status_label($status) {
+    $status_labels = array(
+        'publish'    => '已发布',
+        'pending'    => '待审核',
+        'draft'      => '草稿',
+        'private'    => '私密',
+        'trash'      => '已删除',
+        'auto-draft' => '自动草稿',
+        'inherit'    => '修订版本',
+        'future'     => '定时发布',
+        'pending-revision' => '等待审核的修改'
+    );
+    
+    return isset($status_labels[$status]) ? $status_labels[$status] : $status;
+}
