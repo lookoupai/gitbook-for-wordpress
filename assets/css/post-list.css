@@ -1,0 +1,26 @@
+/* 文章标题链接样式 */
+.post-title-link {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.post-title-link:hover {
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.post-content h2 {
+    margin-bottom: 0.5em;
+}
+
+.last-updated {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 1em;
+}
+
+.post-excerpt {
+    color: #444;
+    line-height: 1.6;
+} 

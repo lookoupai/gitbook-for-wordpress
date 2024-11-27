@@ -137,6 +137,8 @@ function my_theme_enqueue_scripts() {
     if (is_page_template('page-submit-post.php')) {
         wp_enqueue_style('submit-post-style', get_template_directory_uri() . '/assets/css/submit-post.css');
     }
+
+    wp_enqueue_style('post-list-style', get_template_directory_uri() . '/assets/css/post-list.css', array(), '1.0');
 }
 add_action('wp_enqueue_scripts', 'my_theme_enqueue_scripts');
 
