@@ -25,7 +25,7 @@ function theme_activation() {
             'template' => 'page-submit-post.php'
         ),
         'edit-post' => array(
-            'title' => '编辑文章',
+            'title' => '编文章',
             'template' => 'page-edit-post.php'
         ),
         'voting' => array(
@@ -116,11 +116,22 @@ function my_theme_enqueue_scripts() {
 
     // 根据页面类型加载对应的样式和脚本
     if (is_singular() && comments_open()) {
-        wp_enqueue_style('comments-style', get_template_directory_uri() . '/assets/css/comments.css');
+        wp_enqueue_style('comments-style', get_template_directory_uri() . '/assets/css/comments.css', array(), '1.0.1', 'all');
+        wp_enqueue_script('comment-actions', get_template_directory_uri() . '/assets/js/comment-actions.js', array('jquery'), '1.0', true);
+        
+        // 如果在用户中心页面，确保用户中心的样式在评论样式之后加载
+        if (is_page_template('page-user-center.php')) {
+            wp_enqueue_style('user-center-style', get_template_directory_uri() . '/assets/css/user-center.css', array('comments-style'), '1.0');
+            wp_enqueue_script('user-center-script', get_template_directory_uri() . '/assets/js/user-center.js', array('jquery', 'comment-actions'), '1.0', true);
+        }
+        
+        // Markdown 样式
+        wp_enqueue_style('github-markdown', 'https://cdn.jsdelivr.net/gh/sindresorhus/github-markdown-css@4.0.0/github-markdown.min.css');
     }
 
     if (is_page_template('page-edit-post.php')) {
         wp_enqueue_style('edit-post-style', get_template_directory_uri() . '/assets/css/edit-post.css');
+        wp_enqueue_script('edit-post-script', get_template_directory_uri() . '/assets/js/edit-post.js', array('jquery'), '1.0', true);
     }
 
     if (is_page_template('page-submit-post.php')) {

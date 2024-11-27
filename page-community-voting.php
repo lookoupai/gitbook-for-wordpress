@@ -69,9 +69,10 @@ get_header();
         if ($pending_posts->have_posts()) : ?>
             <div class="pending-posts">
                 <?php while ($pending_posts->have_posts()) : $pending_posts->the_post(); 
-                    $post_id = $vote_type === 'edit' ? get_the_ID() : get_the_ID();
-                    $votes = get_post_votes($post_id);
-                    $voting_status = get_post_meta($post_id, '_voting_status', true);
+                    // 如果是修改投票，需要获取父文章ID
+                    $post_id = $vote_type === 'edit' ? wp_get_post_parent_id(get_the_ID()) : get_the_ID();
+                    $votes = get_post_votes(get_the_ID());  // 投票ID仍然使用当前修订版本ID
+                    $voting_status = get_post_meta(get_the_ID(), '_voting_status', true);
                 ?>
                     <article class="voting-card">
                         <header class="entry-header">
@@ -106,7 +107,9 @@ get_header();
                             <?php else : ?>
                                 <?php the_excerpt(); ?>
                             <?php endif; ?>
-                            <a href="<?php echo get_permalink($post_id); ?>" class="read-more">查看原文</a>
+                            <?php if ($post_id) : ?>
+                                <a href="<?php echo get_permalink($post_id); ?>" class="read-more">查看原文</a>
+                            <?php endif; ?>
                         </div>
                         
                         <div class="voting-stats">
