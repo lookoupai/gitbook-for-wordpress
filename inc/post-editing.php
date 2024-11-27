@@ -49,8 +49,20 @@ function handle_post_edit() {
     $revision_id = wp_insert_post($revision_data);
 
     if ($revision_id) {
-        // 保存修改说明到修订版本的元数据
-        update_post_meta($revision_id, '_edit_summary', $edit_summary);
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'post_edit_summaries';
+        
+        // 保存修改说明到自定义表
+        $wpdb->insert(
+            $table_name,
+            array(
+                'revision_id' => $revision_id,
+                'post_id' => $post_id,
+                'user_id' => get_current_user_id(),
+                'summary' => $edit_summary
+            ),
+            array('%d', '%d', '%d', '%s')
+        );
         
         // 通知管理员
         $admin_users = get_users(array('role' => 'administrator'));

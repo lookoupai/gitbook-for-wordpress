@@ -316,3 +316,27 @@ function wrap_category_dropdown($output) {
     return '<div class="category-select-container">' . $output . '</div>';
 }
 add_filter('wp_dropdown_categories', 'wrap_category_dropdown');
+
+// 主题激活时创建修改说明表
+function create_edit_summary_table() {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'post_edit_summaries';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        revision_id bigint(20) NOT NULL,
+        post_id bigint(20) NOT NULL,
+        user_id bigint(20) NOT NULL,
+        summary text NOT NULL,
+        created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY  (id),
+        KEY revision_id (revision_id),
+        KEY post_id (post_id)
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
+add_action('after_switch_theme', 'create_edit_summary_table');

@@ -685,3 +685,16 @@ function add_revision_statuses() {
     ));
 }
 add_action('init', 'add_revision_statuses');
+
+// 获取修改说明
+function get_revision_summary($revision_id) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'post_edit_summaries';
+    
+    $summary = $wpdb->get_var($wpdb->prepare(
+        "SELECT summary FROM $table_name WHERE revision_id = %d",
+        $revision_id
+    ));
+    
+    return $summary ? $summary : '';
+}

@@ -80,9 +80,6 @@ get_header();
                                 <span>作者：<?php echo get_the_author_meta('display_name'); ?></span>
                                 <span>提交时间：<?php echo get_the_date('Y-m-d H:i'); ?></span>
                                 <?php if ($vote_type === 'edit') : ?>
-                                    <span class="edit-summary">
-                                        修改说明：<?php echo esc_html(get_post_meta(get_the_ID(), '_edit_summary', true)); ?>
-                                    </span>
                                     <button class="view-diff-btn" data-revision-id="<?php echo get_the_ID(); ?>">
                                         查看修改内容
                                     </button>
@@ -92,6 +89,17 @@ get_header();
 
                         <div class="entry-content">
                             <?php if ($vote_type === 'edit') : ?>
+                                <?php 
+                                // 获取并显示修改说明
+                                $revision_id = get_the_ID();
+                                $edit_summary = get_revision_summary($revision_id);
+                                if ($edit_summary) : ?>
+                                    <div class="edit-summary">
+                                        <h4>修改说明：</h4>
+                                        <p><?php echo esc_html($edit_summary); ?></p>
+                                    </div>
+                                <?php endif; ?>
+                                
                                 <div class="diff-content" id="diff-<?php echo get_the_ID(); ?>" style="display:none;">
                                     <!-- 差异内容将通过AJAX加载 -->
                                 </div>
