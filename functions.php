@@ -353,3 +353,30 @@ function create_edit_summary_table() {
     dbDelta($sql);
 }
 add_action('after_switch_theme', 'create_edit_summary_table');
+
+// 加载文章标签页相关文件
+function load_article_tabs_files() {
+    // 加载设置页面
+    require_once get_template_directory() . '/inc/article-tabs-settings.php';
+    // 加载AJAX处理
+    require_once get_template_directory() . '/inc/article-tabs-ajax.php';
+}
+add_action('after_setup_theme', 'load_article_tabs_files');
+
+// 加载相关样式和脚本
+function enqueue_article_tabs_assets() {
+    if (is_page_template('page-article-tabs.php')) {
+        // 先注册脚本
+        wp_register_script('article-tabs', get_template_directory_uri() . '/assets/js/article-tabs.js', array('jquery'), null, true);
+        
+        // 本地化脚本数据
+        wp_localize_script('article-tabs', 'articleTabsData', array(
+            'ajaxurl' => admin_url('admin-ajax.php')
+        ));
+        
+        // 加载样式和脚本
+        wp_enqueue_style('article-tabs', get_template_directory_uri() . '/assets/css/article-tabs.css');
+        wp_enqueue_script('article-tabs');
+    }
+}
+add_action('wp_enqueue_scripts', 'enqueue_article_tabs_assets');

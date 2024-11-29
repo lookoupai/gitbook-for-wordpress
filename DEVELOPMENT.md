@@ -12,16 +12,20 @@ theme-root/
 │   ├── post-editing.php          # 文章编辑功能
 │   ├── voting-functions.php      # 投票系统功能
 │   ├── voting-settings.php       # 投票系统设置
+│   ├── article-tabs-ajax.php     # 文章标签页AJAX处理
+│   ├── article-tabs-settings.php # 文章标签页设置
 │   └── comments.php              # 评论系统功能
 ├── assets/
 │   ├── css/                      # 样式文件
 │   │   ├── menu.css             # 菜单样式
 │   │   ├── voting.css           # 投票页面样式
 │   │   ├── comments.css         # 评论样式
+│   │   ├── article-tabs.css     # 文章标签页样式
 │   │   └── login-register.css   # 登录注册样式
 │   └── js/
 │       ├── voting.js            # 投票功能脚本
 │       ├── comment-actions.js   # 评论功能脚本
+│       ├── article-tabs.js      # 文章标签页脚本
 │       └── markdown-editor.js   # Markdown编辑器
 ├── template-parts/              # 模板部件
 │   └── user/                    # 用户相关模板
@@ -71,6 +75,12 @@ theme-root/
 - 实时预览功能
 - 评论审核流程
 - 评论通知功能
+
+### 7. 文章标签页 (article-tabs-*.php)
+- 多标签文章列表展示
+- 支持自定义标签和RSS内容
+- 缓存机制优化性能
+- 响应式设计适配
 
 ## 数据库表结构
 
@@ -179,6 +189,12 @@ CREATE TABLE wp_post_votes (
 - 通知发送确认
 - XSS 防护
 
+### 5. 文章标签页问题
+- 多标签文章列表展示
+- 支持自定义标签和RSS内容
+- 缓存机制优化性能
+- 响应式设计适配
+
 ## 主题激活流程
 
 1. 创建必要的数据表
@@ -224,42 +240,40 @@ CREATE TABLE wp_post_votes (
 - 主题支持论坛
 - 开发者邮箱
 
-## 2024-11-27 最近更新
+## 2024-11-29 最近更新
 
-### 1. 评论系统优化
-- 优化了评论编辑框样式和交互
-- 增加了评论框最小高度(150px)
-- 添加了更好的视觉反馈效果
-- 改进了响应式设计
+### 1. 新增文章标签页功能
+- 添加了多标签文章列表展示功能
+- 支持最新文章、最近修改、热门文章等默认标签
+- 支持自定义标签和RSS内容展示
+- 实现了缓存机制减轻服务器负担
+- 优化了移动端显示效果
+- 添加了后台设置界面
 
-### 2. 文章列表改进
-- 添加了文章标题链接功能
-- 优化了文章列表的显示样式
-- 改进了标题和更新时间的显示
+### 2. 缓存机制优化
+- 为不同类型内容设置独立缓存时间
+- 支持在后台自定义缓存时间
+- 添加了缓存自动清理机制
+- 优化了缓存键的生成方式
 
-### 3. 代码规范
-- 统一了行尾符处理（LF/CRLF）
-- 添加了 .gitattributes 配置
-- 优化了代码结构和注释
-
-### 4. 性能优化
-- 优化了资源加载顺序
-- 添加了条件加载逻辑
-- 改进了样式文件组织
-
-## 文件结构更新
+### 3. 响应式设计改进
+- 优化了移动端标签栏显示
+- 改进了文章列表在不同设备上的显示效果
+- 添加了标签按钮自动换行功能
+- 优化了触摸设备的操作体验
 
 ### 新增/修改的文件
 ```
 theme-root/
+├── inc/
+│   ├── article-tabs-ajax.php     # 新增：AJAX处理
+│   └── article-tabs-settings.php # 新增：后台设置
 ├── assets/
 │   ├── css/
-│   │   ├── comments.css      # 优化的评论样式
-│   │   └── post-list.css     # 新增的文章列表样式
+│   │   └── article-tabs.css      # 新增：标签页样式
 │   └── js/
-│       └── comment-actions.js # 优化的评论交互脚本
-├── right-content.php         # 修改的内容显示模板
-└── .gitattributes           # 新增的 Git 配置文件
+│       └── article-tabs.js       # 新增：交互脚本
+└── page-article-tabs.php         # 新增：页面模板
 ```
 
 ## 样式指南

@@ -1,0 +1,190 @@
+/* 标签导航样式 */
+.article-tabs {
+    margin: 0;
+    background: #fff;
+}
+
+.tab-nav {
+    display: flex;
+    flex-wrap: wrap;
+    background: -webkit-linear-gradient(top, #827265, #716053);
+    padding: 0;
+    margin: 0;
+    border-bottom: 1px solid #e4e8ec;
+}
+
+.tab-btn {
+    padding: 15px 24px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    border-right: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    font-size: 14px;
+    flex: 0 1 auto;
+    min-width: 100px;
+}
+
+.tab-btn:nth-last-child(-n+4) {
+    border-bottom: none;
+}
+
+@media (min-width: 769px) {
+    .tab-btn:nth-child(4n) {
+        border-right: none;
+    }
+}
+
+.tab-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.tab-btn.active {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+}
+
+/* 文章列表容器 */
+.articles-container {
+    position: relative;
+    min-height: 200px;
+    padding: 20px;
+    background: #fbf7ee;
+}
+
+/* 加载动画 */
+.articles-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255,255,255,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #635753;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 文章列表样式 */
+.article-item {
+    padding: 20px;
+    margin-bottom: 15px;
+    background: #fff;
+    border: 1px solid #e4e8ec;
+    border-radius: 4px;
+}
+
+.article-title {
+    margin: 0 0 10px;
+    font-size: 1.2em;
+}
+
+.article-title a {
+    color: #635753;
+    text-decoration: none;
+}
+
+.article-meta {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.article-excerpt {
+    color: #635753;
+    line-height: 1.6;
+}
+
+/* 分页样式 */
+.articles-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.page-number {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #635753;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.page-number:hover {
+    background: #f5f5f5;
+}
+
+.page-number.active {
+    background: #635753;
+    color: #fff;
+    border-color: #635753;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .tab-nav {
+        flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+        flex: 1 1 calc(50% - 1px);
+        min-width: unset;
+        padding: 12px 16px;
+        font-size: 13px;
+        text-align: center;
+    }
+    
+    .tab-btn:nth-child(2n) {
+        border-right: none;
+    }
+    
+    .tab-btn:nth-last-child(-n+2) {
+        border-bottom: none;
+    }
+    
+    .articles-container {
+        padding: 15px 10px;
+    }
+    
+    .article-item {
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .article-title {
+        font-size: 1.1em;
+    }
+    
+    .article-meta {
+        font-size: 0.85em;
+    }
+    
+    .articles-pagination {
+        gap: 5px;
+    }
+    
+    .page-number {
+        padding: 6px 10px;
+        font-size: 0.9em;
+    }
+} 
