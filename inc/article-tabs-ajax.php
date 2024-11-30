@@ -30,6 +30,7 @@ function handle_get_tab_content() {
         'cache_time_updated' => 24,    // 最近修改缓存时间(小时)
         'cache_time_popular' => 24,    // 热门文章缓存时间(小时)
         'cache_time_rss' => 5,         // RSS内容缓存时间(小时)
+        'announcement' => ''
     ));
     
     // 处理自定义标签
@@ -40,13 +41,20 @@ function handle_get_tab_content() {
         if (isset($custom_tabs[$tab_index])) {
             $tab_content = $custom_tabs[$tab_index]['content'];
             if (!empty($tab_content)) {
+                // 先获取新的RSS内容
+                $new_content = do_shortcode($tab_content);
                 $content = array(
-                    'content' => do_shortcode($tab_content),
-                    'pagination' => ''
+                    'content' => $new_content,
+                    'pagination' => '',
+                    'announcement' => wp_kses_post($settings['announcement'])
                 );
-                // 使用设置的RSS缓存时间
-                $cache_time = intval($settings['cache_time_rss']) * HOUR_IN_SECONDS;
-                set_transient($cache_key, $content, $cache_time);
+                
+                // 只有在成功获取新内容后才设置缓存
+                if (!empty($new_content)) {
+                    $cache_time = intval($settings['cache_time_rss']) * HOUR_IN_SECONDS;
+                    set_transient($cache_key, $content, $cache_time);
+                }
+                
                 wp_send_json_success($content);
                 return;
             }
@@ -63,21 +71,51 @@ function handle_get_tab_content() {
     // 根据不同标签设置查询参数和缓存时间
     switch ($tab) {
         case 'latest':
-            $args['orderby'] = 'date';
-            $args['order'] = 'DESC';
-            $cache_time = intval($settings['cache_time_latest']) * HOUR_IN_SECONDS;
+            if (!empty($settings['latest_enabled'])) {
+                $args['orderby'] = 'date';
+                $args['order'] = 'DESC';
+                $args = array_merge($args, get_category_query_args('latest', $settings));
+                $cache_time = intval($settings['cache_time_latest']) * HOUR_IN_SECONDS;
+            } else {
+                wp_send_json_success(array(
+                    'content' => '<div class="no-posts">该功能已禁用</div>',
+                    'pagination' => '',
+                    'announcement' => wp_kses_post($settings['announcement'])
+                ));
+                return;
+            }
             break;
             
         case 'updated':
-            $args['orderby'] = 'modified';
-            $args['order'] = 'DESC';
-            $cache_time = intval($settings['cache_time_updated']) * HOUR_IN_SECONDS;
+            if (!empty($settings['updated_enabled'])) {
+                $args['orderby'] = 'modified';
+                $args['order'] = 'DESC';
+                $args = array_merge($args, get_category_query_args('updated', $settings));
+                $cache_time = intval($settings['cache_time_updated']) * HOUR_IN_SECONDS;
+            } else {
+                wp_send_json_success(array(
+                    'content' => '<div class="no-posts">该功能已禁用</div>',
+                    'pagination' => '',
+                    'announcement' => wp_kses_post($settings['announcement'])
+                ));
+                return;
+            }
             break;
             
         case 'popular':
-            $args['orderby'] = 'comment_count';
-            $args['order'] = 'DESC';
-            $cache_time = intval($settings['cache_time_popular']) * HOUR_IN_SECONDS;
+            if (!empty($settings['popular_enabled'])) {
+                $args['orderby'] = 'comment_count';
+                $args['order'] = 'DESC';
+                $args = array_merge($args, get_category_query_args('popular', $settings));
+                $cache_time = intval($settings['cache_time_popular']) * HOUR_IN_SECONDS;
+            } else {
+                wp_send_json_success(array(
+                    'content' => '<div class="no-posts">该功能已禁用</div>',
+                    'pagination' => '',
+                    'announcement' => wp_kses_post($settings['announcement'])
+                ));
+                return;
+            }
             break;
             
         default:
@@ -106,7 +144,8 @@ function handle_get_tab_content() {
     
     $content = array(
         'content' => $output,
-        'pagination' => $pagination
+        'pagination' => $pagination,
+        'announcement' => wp_kses_post($settings['announcement'])
     );
     
     // 设置缓存
@@ -205,4 +244,85 @@ function get_articles_pagination_html($max_pages, $current_page) {
     
     $output .= '</div>';
     return $output;
+}
+
+// 添加清理缓存的AJAX处理函数
+function handle_clear_article_tabs_cache() {
+    check_ajax_referer('article_tabs_settings', 'nonce');
+    
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('权限不足');
+        return;
+    }
+    
+    global $wpdb;
+    $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : '';
+    
+    switch ($type) {
+        case 'latest':
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM $wpdb->options WHERE option_name LIKE %s",
+                $wpdb->esc_like('_transient_article_tabs_latest_') . '%'
+            ));
+            wp_send_json_success('最新文章缓存已清理');
+            break;
+            
+        case 'updated':
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM $wpdb->options WHERE option_name LIKE %s",
+                $wpdb->esc_like('_transient_article_tabs_updated_') . '%'
+            ));
+            wp_send_json_success('最近修改缓存已清理');
+            break;
+            
+        case 'popular':
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM $wpdb->options WHERE option_name LIKE %s",
+                $wpdb->esc_like('_transient_article_tabs_popular_') . '%'
+            ));
+            wp_send_json_success('热门文章缓存已清理');
+            break;
+            
+        case 'rss':
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM $wpdb->options WHERE option_name LIKE %s",
+                $wpdb->esc_like('_transient_article_tabs_custom_') . '%'
+            ));
+            wp_send_json_success('RSS缓存已清理');
+            break;
+            
+        case 'all':
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM $wpdb->options WHERE option_name LIKE %s",
+                $wpdb->esc_like('_transient_article_tabs_') . '%'
+            ));
+            wp_send_json_success('所有缓存已清理');
+            break;
+            
+        default:
+            wp_send_json_error('未知的缓存类型');
+    }
+}
+add_action('wp_ajax_clear_article_tabs_cache', 'handle_clear_article_tabs_cache'); 
+
+// 在查询文章时添加分类过滤
+function get_category_query_args($type, $settings) {
+    $args = array();
+    
+    if (!empty($settings["{$type}_category_filter"]) && 
+        $settings["{$type}_category_filter"] !== 'none' && 
+        !empty($settings["{$type}_categories"])) {
+        
+        $tax_query = array(
+            array(
+                'taxonomy' => 'category',
+                'field' => 'term_id',
+                'terms' => $settings["{$type}_categories"],
+                'operator' => $settings["{$type}_category_filter"] === 'include' ? 'IN' : 'NOT IN'
+            )
+        );
+        $args['tax_query'] = $tax_query;
+    }
+    
+    return $args;
 } 

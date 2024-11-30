@@ -119,13 +119,13 @@ function render_comment_markdown($content) {
                 var content = document.getElementById('comment-edit-textarea-' + commentId).value;
                 
                 jQuery.ajax({
-                    url: ajaxurl,
+                    url: commentVars.ajaxurl,
                     type: 'POST',
                     data: {
                         action: 'edit_comment',
                         comment_id: commentId,
                         content: content,
-                        nonce: '<?php echo wp_create_nonce("comment-action-nonce"); ?>'
+                        nonce: commentVars.nonce
                     },
                     success: function(response) {
                         if (response.success) {
@@ -157,12 +157,12 @@ function render_comment_markdown($content) {
             function deleteComment(commentId) {
                 if (confirm('确定要删除这条评论吗？')) {
                     jQuery.ajax({
-                        url: ajaxurl,
+                        url: commentVars.ajaxurl,
                         type: 'POST',
                         data: {
                             action: 'delete_comment',
                             comment_id: commentId,
-                            nonce: '<?php echo wp_create_nonce("comment-action-nonce"); ?>'
+                            nonce: commentVars.nonce
                         },
                         success: function(response) {
                             if (response.success) {
@@ -268,4 +268,49 @@ function add_comment_assets() {
     }
 }
 add_action('wp_enqueue_scripts', 'add_comment_assets');
+
+function handle_ajax_comment() {
+    check_ajax_referer('comment-action-nonce', 'nonce');
+    
+    // 验证评论数据
+    if (!isset($_POST['comment']) || empty($_POST['comment'])) {
+        wp_send_json_error(array('message' => '评论内容不能为空'));
+        return;
+    }
+    
+    // 获取评论数据
+    $comment_data = array(
+        'comment_post_ID' => $_POST['comment_post_ID'],
+        'comment_content' => $_POST['comment'],
+        'comment_parent' => isset($_POST['comment_parent']) ? $_POST['comment_parent'] : 0,
+        'comment_author' => wp_get_current_user()->display_name,
+        'comment_author_email' => wp_get_current_user()->user_email,
+        'comment_author_url' => wp_get_current_user()->user_url,
+        'user_id' => get_current_user_id()
+    );
+    
+    // 插入评论
+    $comment_id = wp_insert_comment($comment_data);
+    
+    if ($comment_id) {
+        // 获取新评论的HTML
+        $comment = get_comment($comment_id);
+        ob_start();
+        wp_list_comments(array(
+            'style'      => 'ol',
+            'short_ping' => true,
+            'callback'   => 'custom_comment_template'
+        ), array($comment));
+        $comment_html = ob_get_clean();
+        
+        wp_send_json_success(array(
+            'comment_html' => $comment_html,
+            'comment_id' => $comment_id,
+            'message' => '评论发表成功！'
+        ));
+    } else {
+        wp_send_json_error(array('message' => '评论提交失败'));
+    }
+}
+add_action('wp_ajax_handle_ajax_comment', 'handle_ajax_comment');
 ?> 

@@ -5,21 +5,29 @@ jQuery(document).ready(function($) {
     const pagination = container.find('.articles-pagination');
     let currentTab = 'latest';
     
+    // 创建公告元素并插入到标签按钮上方
+    const announcement = $('<div id="article-tabs-announcement" class="article-tabs-announcement"></div>');
+    $('.tab-nav').before(announcement);
+    announcement.hide(); // 默认隐藏
+    
     // 加载内容函数
     function loadTabContent(tab, page = 1) {
         // 显示加载动画
         loading.show();
         content.css('opacity', '0.5');
         
-        // 更新URL参数
-        const url = new URL(window.location.href);
-        url.searchParams.set('tab', tab);
-        if (page > 1) {
-            url.searchParams.set('page', page);
-        } else {
-            url.searchParams.delete('page');
+        // 更新URL参数，但在首页时保持干净的URL
+        const isHomepage = document.body.classList.contains('home');
+        if (!isHomepage) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', tab);
+            if (page > 1) {
+                url.searchParams.set('page', page);
+            } else {
+                url.searchParams.delete('page');
+            }
+            window.history.pushState({}, '', url);
         }
-        window.history.pushState({}, '', url);
         
         // 发送AJAX请求
         $.ajax({
@@ -32,6 +40,14 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
+                    // 处理公告显示
+                    if (response.data.announcement) {
+                        announcement.html(response.data.announcement).show();
+                    } else {
+                        announcement.hide();
+                    }
+                    
+                    // 更新内容和分页
                     content.html(response.data.content);
                     pagination.html(response.data.pagination);
                     

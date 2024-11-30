@@ -119,6 +119,12 @@ function my_theme_enqueue_scripts() {
         wp_enqueue_style('comments-style', get_template_directory_uri() . '/assets/css/comments.css', array(), '1.0.1', 'all');
         wp_enqueue_script('comment-actions', get_template_directory_uri() . '/assets/js/comment-actions.js', array('jquery'), '1.0', true);
         
+        // 添加本地化数据
+        wp_localize_script('comment-actions', 'commentVars', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('comment-action-nonce')
+        ));
+        
         // 如果在用户中心页面，确保用户中心的样式在评论样式之后加载
         if (is_page_template('page-user-center.php')) {
             wp_enqueue_style('user-center-style', get_template_directory_uri() . '/assets/css/user-center.css', array('comments-style'), '1.0');
@@ -380,3 +386,25 @@ function enqueue_article_tabs_assets() {
     }
 }
 add_action('wp_enqueue_scripts', 'enqueue_article_tabs_assets');
+
+// 加载后台脚本
+function enqueue_article_tabs_admin_assets($hook) {
+    if ('appearance_page_article-tabs-settings' !== $hook) {
+        return;
+    }
+    
+    wp_enqueue_script(
+        'article-tabs-admin', 
+        get_template_directory_uri() . '/assets/js/article-tabs-admin.js', 
+        array('jquery'), 
+        null, 
+        true
+    );
+    
+    // 添加本地化数据
+    wp_localize_script('article-tabs-admin', 'articleTabsSettings', array(
+        'nonce' => wp_create_nonce('article_tabs_settings'),
+        'ajaxurl' => admin_url('admin-ajax.php') // 添加 AJAX URL
+    ));
+}
+add_action('admin_enqueue_scripts', 'enqueue_article_tabs_admin_assets');

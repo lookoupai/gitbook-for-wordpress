@@ -61,6 +61,144 @@ function article_tabs_settings_page() {
                         <p class="description">字符数</p>
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row">公告内容</th>
+                    <td>
+                        <textarea name="article_tabs_settings[announcement]" 
+                                  rows="3" style="width: 100%;"
+                                  placeholder="留空则不显示公告"><?php 
+                            echo esc_textarea(isset($settings['announcement']) ? $settings['announcement'] : ''); 
+                        ?></textarea>
+                        <p class="description">支持HTML，可以添加链接等</p>
+                    </td>
+                </tr>
+            </table>
+            
+            <h2>列表设置</h2>
+            <table class="form-table">
+                <!-- 最新文章设置 -->
+                <tr>
+                    <th scope="row">最新文章</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="article_tabs_settings[latest_enabled]" value="1" 
+                                   <?php checked(isset($settings['latest_enabled']) && $settings['latest_enabled']); ?>>
+                            启用最新文章列表
+                        </label>
+                        <div class="tab-category-settings" style="margin-top: 10px;">
+                            <p>
+                                <label><input type="radio" name="article_tabs_settings[latest_category_filter]" value="none" 
+                                       <?php checked(!isset($settings['latest_category_filter']) || $settings['latest_category_filter'] === 'none'); ?>>
+                                    不限制分类</label>
+                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[latest_category_filter]" value="include" 
+                                       <?php checked(isset($settings['latest_category_filter']) && $settings['latest_category_filter'] === 'include'); ?>>
+                                    仅包含以下分类</label>
+                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[latest_category_filter]" value="exclude" 
+                                       <?php checked(isset($settings['latest_category_filter']) && $settings['latest_category_filter'] === 'exclude'); ?>>
+                                    排除以下分类</label>
+                            </p>
+                            <div class="category-select-wrapper" style="display: <?php echo (!isset($settings['latest_category_filter']) || $settings['latest_category_filter'] === 'none') ? 'none' : 'block'; ?>;">
+                                <select name="article_tabs_settings[latest_categories][]" multiple style="width: 100%; max-width: 400px; height: 100px;">
+                                    <?php
+                                    $selected_cats = isset($settings['latest_categories']) ? (array)$settings['latest_categories'] : array();
+                                    $categories = get_categories(array('hide_empty' => false));
+                                    foreach ($categories as $category) {
+                                        printf(
+                                            '<option value="%s" %s>%s</option>',
+                                            esc_attr($category->term_id),
+                                            in_array($category->term_id, $selected_cats) ? 'selected' : '',
+                                            esc_html($category->name)
+                                        );
+                                    }
+                                    ?>
+                                </select>
+                                <p class="description">按住 Ctrl/Command 键可多选</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                
+                <!-- 最近修改设置 -->
+                <tr>
+                    <th scope="row">最近修改</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="article_tabs_settings[updated_enabled]" value="1" 
+                                   <?php checked(isset($settings['updated_enabled']) && $settings['updated_enabled']); ?>>
+                            启用最近修改列表
+                        </label>
+                        <div class="tab-category-settings" style="margin-top: 10px;">
+                            <p>
+                                <label><input type="radio" name="article_tabs_settings[updated_category_filter]" value="none" 
+                                       <?php checked(!isset($settings['updated_category_filter']) || $settings['updated_category_filter'] === 'none'); ?>>
+                                    不限制分类</label>
+                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[updated_category_filter]" value="include" 
+                                       <?php checked(isset($settings['updated_category_filter']) && $settings['updated_category_filter'] === 'include'); ?>>
+                                    仅包含以下分类</label>
+                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[updated_category_filter]" value="exclude" 
+                                       <?php checked(isset($settings['updated_category_filter']) && $settings['updated_category_filter'] === 'exclude'); ?>>
+                                    排除以下分类</label>
+                            </p>
+                            <div class="category-select-wrapper" style="display: <?php echo (!isset($settings['updated_category_filter']) || $settings['updated_category_filter'] === 'none') ? 'none' : 'block'; ?>;">
+                                <select name="article_tabs_settings[updated_categories][]" multiple style="width: 100%; max-width: 400px; height: 100px;">
+                                    <?php
+                                    $selected_cats = isset($settings['updated_categories']) ? (array)$settings['updated_categories'] : array();
+                                    foreach ($categories as $category) {
+                                        printf(
+                                            '<option value="%s" %s>%s</option>',
+                                            esc_attr($category->term_id),
+                                            in_array($category->term_id, $selected_cats) ? 'selected' : '',
+                                            esc_html($category->name)
+                                        );
+                                    }
+                                    ?>
+                                </select>
+                                <p class="description">按住 Ctrl/Command 键可多选</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                
+                <!-- 热门文章设置 -->
+                <tr>
+                    <th scope="row">热门文章</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="article_tabs_settings[popular_enabled]" value="1" 
+                                   <?php checked(isset($settings['popular_enabled']) && $settings['popular_enabled']); ?>>
+                            启用热门文章列表
+                        </label>
+                        <div class="tab-category-settings" style="margin-top: 10px;">
+                            <p>
+                                <label><input type="radio" name="article_tabs_settings[popular_category_filter]" value="none" 
+                                       <?php checked(!isset($settings['popular_category_filter']) || $settings['popular_category_filter'] === 'none'); ?>>
+                                    不限制分类</label>
+                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[popular_category_filter]" value="include" 
+                                       <?php checked(isset($settings['popular_category_filter']) && $settings['popular_category_filter'] === 'include'); ?>>
+                                    仅包含以下分类</label>
+                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[popular_category_filter]" value="exclude" 
+                                       <?php checked(isset($settings['popular_category_filter']) && $settings['popular_category_filter'] === 'exclude'); ?>>
+                                    排除以下分类</label>
+                            </p>
+                            <div class="category-select-wrapper" style="display: <?php echo (!isset($settings['popular_category_filter']) || $settings['popular_category_filter'] === 'none') ? 'none' : 'block'; ?>;">
+                                <select name="article_tabs_settings[popular_categories][]" multiple style="width: 100%; max-width: 400px; height: 100px;">
+                                    <?php
+                                    $selected_cats = isset($settings['popular_categories']) ? (array)$settings['popular_categories'] : array();
+                                    foreach ($categories as $category) {
+                                        printf(
+                                            '<option value="%s" %s>%s</option>',
+                                            esc_attr($category->term_id),
+                                            in_array($category->term_id, $selected_cats) ? 'selected' : '',
+                                            esc_html($category->name)
+                                        );
+                                    }
+                                    ?>
+                                </select>
+                                <p class="description">按住 Ctrl/Command 键可多选</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
             </table>
             
             <h2>缓存设置</h2>
@@ -71,6 +209,8 @@ function article_tabs_settings_page() {
                         <input type="number" name="article_tabs_settings[cache_time_latest]" 
                                value="<?php echo esc_attr($settings['cache_time_latest']); ?>" min="1" max="72">
                         <p class="description">小时</p>
+                        <button type="button" id="clear-latest-cache" class="button" data-type="latest">清理最新文章缓存</button>
+                        <span id="clear-latest-status" class="clear-cache-status" style="margin-left: 10px;"></span>
                     </td>
                 </tr>
                 <tr>
@@ -79,6 +219,8 @@ function article_tabs_settings_page() {
                         <input type="number" name="article_tabs_settings[cache_time_updated]" 
                                value="<?php echo esc_attr($settings['cache_time_updated']); ?>" min="1" max="72">
                         <p class="description">小时</p>
+                        <button type="button" id="clear-updated-cache" class="button" data-type="updated">清理最近修改缓存</button>
+                        <span id="clear-updated-status" class="clear-cache-status" style="margin-left: 10px;"></span>
                     </td>
                 </tr>
                 <tr>
@@ -87,6 +229,8 @@ function article_tabs_settings_page() {
                         <input type="number" name="article_tabs_settings[cache_time_popular]" 
                                value="<?php echo esc_attr($settings['cache_time_popular']); ?>" min="1" max="72">
                         <p class="description">小时</p>
+                        <button type="button" id="clear-popular-cache" class="button" data-type="popular">清理热门文章缓存</button>
+                        <span id="clear-popular-status" class="clear-cache-status" style="margin-left: 10px;"></span>
                     </td>
                 </tr>
                 <tr>
@@ -95,6 +239,15 @@ function article_tabs_settings_page() {
                         <input type="number" name="article_tabs_settings[cache_time_rss]" 
                                value="<?php echo esc_attr($settings['cache_time_rss']); ?>" min="1" max="72">
                         <p class="description">小时</p>
+                        <button type="button" id="clear-rss-cache" class="button" data-type="rss">清理RSS缓存</button>
+                        <span id="clear-rss-status" class="clear-cache-status" style="margin-left: 10px;"></span>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">清理所有缓存</th>
+                    <td>
+                        <button type="button" id="clear-all-cache" class="button button-primary">清理所有缓存</button>
+                        <span id="clear-all-status" class="clear-cache-status" style="margin-left: 10px;"></span>
                     </td>
                 </tr>
             </table>

@@ -50,7 +50,8 @@ if (post_password_required()) {
         'must_log_in'          => '<p class="must-log-in">' . sprintf('您必须<a href="%s">登录</a>才能发表评论。', wp_login_url(apply_filters('the_permalink', get_permalink()))) . '</p>',
         'logged_in_as'         => '<p class="logged-in-as">' . sprintf('已登录为 <a href="%1$s">%2$s</a>。<a href="%3$s">登出？</a>', get_edit_user_link(), $user_identity, wp_logout_url(apply_filters('the_permalink', get_permalink()))) . '</p>',
         'comment_notes_before' => '<p class="comment-notes">您的邮箱地址不会被公开。</p>',
-        'class_submit'         => 'submit-button'
+        'class_submit'         => 'submit-button',
+        'action'               => admin_url('admin-ajax.php')
     ));
     ?>
 </div> 

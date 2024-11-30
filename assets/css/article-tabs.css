@@ -187,4 +187,35 @@
         padding: 6px 10px;
         font-size: 0.9em;
     }
+}
+
+/* 公告样式 */
+.article-tabs-announcement {
+    margin: 0 0 20px 0;
+    padding: 15px 20px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    font-size: 14px;
+    line-height: 1.6;
+    color: #635753;
+}
+
+.article-tabs-announcement a {
+    color: #1a73e8;
+    text-decoration: none;
+}
+
+.article-tabs-announcement a:hover {
+    text-decoration: underline;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .article-tabs-announcement {
+        margin: 0 10px 15px 10px;
+        padding: 12px 15px;
+        font-size: 13px;
+    }
 } 

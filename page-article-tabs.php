@@ -15,14 +15,28 @@ get_header(); ?>
         <!-- 标签导航 -->
         <div class="article-tabs">
             <div class="tab-nav">
-                <button class="tab-btn active" data-tab="latest">最新文章</button>
-                <button class="tab-btn" data-tab="updated">最近修改</button>
-                <button class="tab-btn" data-tab="popular">热门文章</button>
                 <?php
+                // 获取设置
+                $settings = get_option('article_tabs_settings', array(
+                    'latest_enabled' => true,    // 默认启用最新文章
+                    'updated_enabled' => false,  // 默认禁用最近修改
+                    'popular_enabled' => false   // 默认禁用热门文章
+                ));
+
+                // 显示启用的标签
+                if (!isset($settings['latest_enabled']) || $settings['latest_enabled']) {
+                    echo '<button class="tab-btn active" data-tab="latest">最新文章</button>';
+                }
+                if (!empty($settings['updated_enabled'])) {
+                    echo '<button class="tab-btn" data-tab="updated">最近修改</button>';
+                }
+                if (!empty($settings['popular_enabled'])) {
+                    echo '<button class="tab-btn" data-tab="popular">热门文章</button>';
+                }
+
                 // 获取自定义标签
                 $custom_tabs = get_option('article_custom_tabs', array());
                 foreach ($custom_tabs as $index => $tab) {
-                    // 使用索引作为ID
                     $tab_id = isset($tab['id']) ? $tab['id'] : 'custom_' . $index;
                     printf(
                         '<button class="tab-btn" data-tab="%s">%s</button>',
