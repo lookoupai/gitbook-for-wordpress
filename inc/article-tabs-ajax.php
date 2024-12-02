@@ -39,6 +39,12 @@ function handle_get_tab_content() {
         $tab_index = substr($tab, 7);
         
         if (isset($custom_tabs[$tab_index])) {
+            // 检查是否需要登录
+            if (!empty($custom_tabs[$tab_index]['login_required']) && !is_user_logged_in()) {
+                wp_send_json_error(array('message' => '需要登录才能查看此内容'));
+                return;
+            }
+            
             $tab_content = $custom_tabs[$tab_index]['content'];
             if (!empty($tab_content)) {
                 // 先获取新的RSS内容
@@ -189,7 +195,7 @@ function get_article_item_html($excerpt_length) {
     ?>
     <article class="article-item">
         <h2 class="article-title">
-            <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
+            <a href="<?php the_permalink(); ?>"><strong><?php the_title(); ?></strong></a>
         </h2>
         <div class="article-meta">
             <span class="post-date"><?php echo get_the_date(); ?></span>

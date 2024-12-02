@@ -257,9 +257,14 @@ function article_tabs_settings_page() {
                 <?php foreach ($custom_tabs as $index => $tab) : ?>
                 <div class="custom-tab">
                     <input type="text" name="article_custom_tabs[<?php echo $index; ?>][title]" 
-                           value="<?php echo esc_attr($tab['title']); ?>" placeholder="标签标题">
+                           value="<?php echo esc_attr($tab['title']); ?>" class="regular-text" required>
                     <textarea name="article_custom_tabs[<?php echo $index; ?>][content]" 
-                              placeholder="RSS短代码或其他内容"><?php echo esc_textarea($tab['content']); ?></textarea>
+                              rows="3" class="large-text" required><?php echo esc_textarea($tab['content']); ?></textarea>
+                    <label>
+                        <input type="checkbox" name="article_custom_tabs[<?php echo $index; ?>][login_required]" value="1" 
+                               <?php checked(isset($tab['login_required']) && $tab['login_required']); ?>>
+                        仅登录用户可见
+                    </label>
                     <button type="button" class="button remove-tab">删除</button>
                 </div>
                 <?php endforeach; ?>
@@ -276,8 +281,9 @@ function article_tabs_settings_page() {
         
         $('#add-tab').on('click', function() {
             var newTab = $('<div class="custom-tab">' +
-                '<input type="text" name="article_custom_tabs[' + tabIndex + '][title]" placeholder="标签标题">' +
-                '<textarea name="article_custom_tabs[' + tabIndex + '][content]" placeholder="RSS短代码或其他内容"></textarea>' +
+                '<input type="text" name="article_custom_tabs[' + tabIndex + '][title]" class="regular-text" required>' +
+                '<textarea name="article_custom_tabs[' + tabIndex + '][content]" rows="3" class="large-text" required></textarea>' +
+                '<label><input type="checkbox" name="article_custom_tabs[' + tabIndex + '][login_required]" value="1">仅登录用户可见</label>' +
                 '<button type="button" class="button remove-tab">删除</button>' +
                 '</div>');
             $('#custom-tabs').append(newTab);
@@ -315,6 +321,9 @@ function save_article_tabs_settings($value) {
     foreach ($value as $index => &$tab) {
         if (!isset($tab['id'])) {
             $tab['id'] = 'custom_' . $index;
+        }
+        if (!isset($tab['login_required'])) {
+            $tab['login_required'] = 0;
         }
     }
     return $value;

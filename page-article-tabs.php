@@ -38,6 +38,12 @@ get_header(); ?>
                 $custom_tabs = get_option('article_custom_tabs', array());
                 foreach ($custom_tabs as $index => $tab) {
                     $tab_id = isset($tab['id']) ? $tab['id'] : 'custom_' . $index;
+                    
+                    // 检查是否需要登录可见
+                    if (!empty($tab['login_required']) && !is_user_logged_in()) {
+                        continue; // 跳过不显示需要登录的标签
+                    }
+                    
                     printf(
                         '<button class="tab-btn" data-tab="%s">%s</button>',
                         esc_attr($tab_id),

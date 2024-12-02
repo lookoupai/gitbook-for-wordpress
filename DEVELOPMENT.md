@@ -15,22 +15,36 @@ theme-root/
 │   ├── article-tabs-ajax.php     # 文章标签页AJAX处理
 │   ├── article-tabs-settings.php # 文章标签页设置
 │   └── comments.php              # 评论系统功能
-├── assets/
-│   ├── css/                      # 样式文件
+├── assets/                       # 主题资源文件
+│   ├── css/                      # 样式文件目录
 │   │   ├── menu.css             # 菜单样式
 │   │   ├── voting.css           # 投票页面样式
 │   │   ├── comments.css         # 评论样式
 │   │   ├── article-tabs.css     # 文章标签页样式
 │   │   └── login-register.css   # 登录注册样式
-│   └── js/
+│   └── js/                      # JavaScript文件目录
+│       ├── article-tabs.js      # 文章标签页前端脚本
+│       ├── article-tabs-admin.js # 文章标签页管理脚本
 │       ├── voting.js            # 投票功能脚本
 │       ├── comment-actions.js   # 评论功能脚本
-│       ├── article-tabs.js      # 文章标签页脚本
-│       └── markdown-editor.js   # Markdown编辑器
-├── template-parts/              # 模板部件
+│       ├── edit-post.js         # 文章编辑脚本
+│       ├── markdown-editor.js   # Markdown编辑器
+│       └── user-center.js       # 用户中心脚本
+├── template-parts/              # 模板部件目录
 │   └── user/                    # 用户相关模板
 │       └── notifications.php    # 通知显示模板
-└── functions.php                # 主题核心功能和模块加载
+├── page-*.php                   # 页面模板文件
+│   ├── page-article-tabs.php    # 文章标签页模板
+│   ├── page-login.php          # 登录页面模板
+│   ├── page-register.php       # 注册页面模板
+│   ├── page-user-center.php    # 用户中心页面
+│   ├── page-submit-post.php    # 文章提交页面
+│   ├── page-edit-post.php      # 文章编辑页面
+│   └── page-community-voting.php # 社区投票页面
+├── functions.php               # 主题核心功能和模块加载
+├── style.scss                 # SCSS源文件
+├── style.css                  # 编译后的CSS文件
+└── package.json               # 依赖包配置文件
 ```
 
 ## 功能模块说明
@@ -81,6 +95,11 @@ theme-root/
 - 支持自定义标签和RSS内容
 - 缓存机制优化性能
 - 响应式设计适配
+- 自定义标签权限控制
+  - 可设置标签是否需要登录才能查看
+  - 前端自动隐藏未授权标签
+  - AJAX请求权限验证
+  - 支持每个标签单独设置
 
 ## 数据库表结构
 
@@ -194,6 +213,11 @@ CREATE TABLE wp_post_votes (
 - 支持自定义标签和RSS内容
 - 缓存机制优化性能
 - 响应式设计适配
+- 权限控制问题
+  - 检查登录状态
+  - 验证访问权限
+  - 标签显示逻辑
+  - AJAX请求验证
 
 ## 主题激活流程
 
@@ -288,4 +312,3 @@ theme-root/
 - 标题链接样式
 - 更新时间显示
 - 列表项间距和对齐
-
