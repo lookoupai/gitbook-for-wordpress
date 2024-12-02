@@ -24,33 +24,31 @@ get_header(); ?>
                 ));
 
                 // 显示启用的标签
-                if (!isset($settings['latest_enabled']) || $settings['latest_enabled']) {
-                    echo '<button class="tab-btn active" data-tab="latest">最新文章</button>';
-                }
-                if (!empty($settings['updated_enabled'])) {
-                    echo '<button class="tab-btn" data-tab="updated">最近修改</button>';
-                }
-                if (!empty($settings['popular_enabled'])) {
-                    echo '<button class="tab-btn" data-tab="popular">热门文章</button>';
-                }
-
+                if ($settings['latest_enabled']) : ?>
+                    <button class="tab-btn" data-tab="latest">最新文章</button>
+                <?php endif; ?>
+                
+                <?php if ($settings['updated_enabled']) : ?>
+                    <button class="tab-btn" data-tab="updated">最近修改</button>
+                <?php endif; ?>
+                
+                <?php if ($settings['popular_enabled']) : ?>
+                    <button class="tab-btn" data-tab="popular">热门文章</button>
+                <?php endif; ?>
+                
+                <?php
                 // 获取自定义标签
                 $custom_tabs = get_option('article_custom_tabs', array());
-                foreach ($custom_tabs as $index => $tab) {
-                    $tab_id = isset($tab['id']) ? $tab['id'] : 'custom_' . $index;
-                    
+                foreach ($custom_tabs as $index => $tab) :
                     // 检查是否需要登录可见
                     if (!empty($tab['login_required']) && !is_user_logged_in()) {
                         continue; // 跳过不显示需要登录的标签
                     }
-                    
-                    printf(
-                        '<button class="tab-btn" data-tab="%s">%s</button>',
-                        esc_attr($tab_id),
-                        esc_html($tab['title'])
-                    );
-                }
                 ?>
+                    <button class="tab-btn" data-tab="custom_<?php echo $index; ?>">
+                        <?php echo esc_html($tab['title']); ?>
+                    </button>
+                <?php endforeach; ?>
             </div>
             
             <!-- 文章列表容器 -->
@@ -66,5 +64,42 @@ get_header(); ?>
         <?php require 'footer-container.php' ?>
     </main>
 </div>
+
+<script>
+jQuery(document).ready(function($) {
+    // 获取当前标签
+    var currentTab = '<?php echo get_query_var('tab', 'latest'); ?>';
+    window.currentTab = currentTab; // 使其全局可用
+    
+    // 标签切换事件
+    $('.tab-btn').on('click', function(e) {
+        e.preventDefault();
+        const $this = $(this);
+        const tab = $this.data('tab');
+        
+        if (tab === currentTab) return;
+        
+        // 更新URL，但不刷新页面
+        if (history.pushState) {
+            const newurl = tab === 'latest' ? 
+                '/' : // 最新文章标签使用根目录
+                '/tabs/' + tab + '/';
+            window.history.pushState({path: newurl}, '', newurl);
+        }
+        
+        $('.tab-btn').removeClass('active');
+        $this.addClass('active');
+        currentTab = tab;
+        window.currentTab = tab; // 更新全局变量
+        
+        loadTabContent(tab);
+    });
+    
+    // 初始加载
+    $('.tab-btn[data-tab="' + currentTab + '"]').addClass('active')
+        .siblings().removeClass('active');
+    loadTabContent(currentTab);
+});
+</script>
 
 <?php get_footer(); ?> 

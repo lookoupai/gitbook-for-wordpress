@@ -328,4 +328,154 @@ function save_article_tabs_settings($value) {
     }
     return $value;
 }
-add_filter('pre_update_option_article_custom_tabs', 'save_article_tabs_settings'); 
+add_filter('pre_update_option_article_custom_tabs', 'save_article_tabs_settings');
+
+// 加载关样式和脚本
+function enqueue_article_tabs_assets() {
+    if (is_page_template('page-article-tabs.php')) {
+        wp_register_script('article-tabs', get_template_directory_uri() . '/assets/js/article-tabs.js', array('jquery'), null, true);
+        wp_localize_script('article-tabs', 'articleTabsData', array(
+            'ajaxurl' => admin_url('admin-ajax.php')
+        ));
+        wp_enqueue_style('article-tabs', get_template_directory_uri() . '/assets/css/article-tabs.css');
+        wp_enqueue_script('article-tabs');
+    }
+}
+add_action('wp_enqueue_scripts', 'enqueue_article_tabs_assets');
+
+// 加载后台脚本
+function enqueue_article_tabs_admin_assets($hook) {
+    if ('appearance_page_article-tabs-settings' !== $hook) {
+        return;
+    }
+    
+    wp_enqueue_script(
+        'article-tabs-admin', 
+        get_template_directory_uri() . '/assets/js/article-tabs-admin.js', 
+        array('jquery'), 
+        null, 
+        true
+    );
+    
+    // 添加本地化数据
+    wp_localize_script('article-tabs-admin', 'articleTabsSettings', array(
+        'nonce' => wp_create_nonce('article_tabs_settings'),
+        'ajaxurl' => admin_url('admin-ajax.php')
+    ));
+}
+add_action('admin_enqueue_scripts', 'enqueue_article_tabs_admin_assets');
+
+// 获取文章标签页的ID
+function get_article_tabs_page_id() {
+    $page = get_page_by_path('article-tabs');
+    return $page ? $page->ID : false;
+}
+
+// 修改重写规则函数
+function add_article_tabs_rewrite_rules() {
+    $page_id = get_article_tabs_page_id();
+    if ($page_id) {
+        // 检查是否是首页
+        $front_page_id = get_option('page_on_front');
+        $is_front_page = ($front_page_id == $page_id);
+        
+        if ($is_front_page) {
+            // 如果是首页，使用特殊的规则
+            add_rewrite_rule(
+                '^tabs/([^/]+)/?$',
+                'index.php?tab=$matches[1]',
+                'top'
+            );
+        } else {
+            add_rewrite_rule(
+                '^tabs/([^/]+)/?$',
+                'index.php?page_id=' . $page_id . '&tab=$matches[1]',
+                'top'
+            );
+        }
+    }
+}
+add_action('init', 'add_article_tabs_rewrite_rules');
+
+// 添加查询变量
+function add_article_tabs_query_vars($vars) {
+    $vars[] = 'tab';
+    return $vars;
+}
+add_filter('query_vars', 'add_article_tabs_query_vars');
+
+// 修改模板加载逻辑
+function article_tabs_template_include($template) {
+    if (get_query_var('tab')) {
+        $tab = get_query_var('tab');
+        
+        // 检查是否是需要登录的自定义标签
+        if (strpos($tab, 'custom_') === 0) {
+            $custom_tabs = get_option('article_custom_tabs', array());
+            $tab_index = substr($tab, 7);
+            
+            if (isset($custom_tabs[$tab_index]) && 
+                !empty($custom_tabs[$tab_index]['login_required']) && 
+                !is_user_logged_in()) {
+                
+                // 获取登录页面链接
+                $login_page = get_page_by_path('login');
+                if ($login_page) {
+                    // 构建带有返回URL的登录链接
+                    $current_url = home_url($_SERVER['REQUEST_URI']);
+                    $redirect_url = add_query_arg('redirect_to', 
+                                                   urlencode($current_url), 
+                                                   get_permalink($login_page));
+                    wp_redirect($redirect_url);
+                    exit;
+                } else {
+                    // 如果没有自定义登录页面，跳转到首页
+                    wp_redirect(home_url('/'));
+                    exit;
+                }
+            }
+        }
+        
+        // 设置查询为文章标签页
+        global $wp_query;
+        $page = get_page_by_path('article-tabs');
+        if ($page) {
+            $wp_query->is_page = true;
+            $wp_query->is_singular = true;
+            $wp_query->is_home = false;
+            $wp_query->is_archive = false;
+            $wp_query->is_category = false;
+            $wp_query->post = $page;
+            $wp_query->posts = array($page);
+            $wp_query->queried_object = $page;
+            $wp_query->queried_object_id = $page->ID;
+            $wp_query->post_count = 1;
+            $wp_query->current_post = -1;
+        }
+        
+        // 如果有 tab 参数，强制使用文章标签页模板
+        $new_template = locate_template('page-article-tabs.php');
+        if ($new_template) {
+            return $new_template;
+        }
+    }
+    return $template;
+}
+add_filter('template_include', 'article_tabs_template_include');
+
+// 在保存首页设置时也刷新规则
+function refresh_rules_on_front_page_change($old_value, $new_value) {
+    if ($old_value != $new_value) {
+        refresh_article_tabs_rules();
+    }
+}
+add_action('update_option_page_on_front', 'refresh_rules_on_front_page_change', 10, 2);
+
+// 手动刷新重写规则
+function refresh_article_tabs_rules() {
+    add_article_tabs_rewrite_rules();
+    flush_rewrite_rules();
+}
+
+// 在保存设置时刷新规则
+add_action('update_option_article_tabs_settings', 'refresh_article_tabs_rules'); 

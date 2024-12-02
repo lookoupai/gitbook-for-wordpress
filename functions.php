@@ -7,6 +7,7 @@ require_once get_template_directory() . '/inc/post-submission.php';
 require_once get_template_directory() . '/inc/post-editing.php';       
 require_once get_template_directory() . '/inc/voting-functions.php';   
 require_once get_template_directory() . '/inc/voting-settings.php';    
+require_once get_template_directory() . '/inc/back-to-top.php';
 
 // 主题激活时的处理函数
 function theme_activation() {
@@ -31,6 +32,10 @@ function theme_activation() {
         'voting' => array(
             'title' => '投票管理',
             'template' => 'page-voting.php'
+        ),
+        'article-tabs' => array(
+            'title' => '文章标签页',
+            'template' => 'page-article-tabs.php'
         )
     );
     
@@ -68,7 +73,7 @@ function theme_deactivation() {
 }
 add_action('switch_theme', 'theme_deactivation');
 
-// 设置主题默认特性
+// 设置题默认特性
 function my_theme_setup() {
     add_theme_support('post-thumbnails');
     add_theme_support('title-tag');
@@ -238,7 +243,7 @@ function check_user_center_access() {
 }
 add_action('template_redirect', 'check_user_center_access');
 
-// 性能优化
+// ��能优化
 function optimize_post_pages() {
     if (is_page_template(['page-submit-post.php', 'page-edit-post.php'])) {
         wp_enqueue_script('jquery');
@@ -269,7 +274,7 @@ function optimize_post_pages() {
 }
 add_action('wp_enqueue_scripts', 'optimize_post_pages', 100);
 
-// 编码和缓存控
+// 编码和存控
 function ensure_correct_encoding() {
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -368,43 +373,3 @@ function load_article_tabs_files() {
     require_once get_template_directory() . '/inc/article-tabs-ajax.php';
 }
 add_action('after_setup_theme', 'load_article_tabs_files');
-
-// 加载相关样式和脚本
-function enqueue_article_tabs_assets() {
-    if (is_page_template('page-article-tabs.php')) {
-        // 先注册脚本
-        wp_register_script('article-tabs', get_template_directory_uri() . '/assets/js/article-tabs.js', array('jquery'), null, true);
-        
-        // 本地化脚本数据
-        wp_localize_script('article-tabs', 'articleTabsData', array(
-            'ajaxurl' => admin_url('admin-ajax.php')
-        ));
-        
-        // 加载样式和脚本
-        wp_enqueue_style('article-tabs', get_template_directory_uri() . '/assets/css/article-tabs.css');
-        wp_enqueue_script('article-tabs');
-    }
-}
-add_action('wp_enqueue_scripts', 'enqueue_article_tabs_assets');
-
-// 加载后台脚本
-function enqueue_article_tabs_admin_assets($hook) {
-    if ('appearance_page_article-tabs-settings' !== $hook) {
-        return;
-    }
-    
-    wp_enqueue_script(
-        'article-tabs-admin', 
-        get_template_directory_uri() . '/assets/js/article-tabs-admin.js', 
-        array('jquery'), 
-        null, 
-        true
-    );
-    
-    // 添加本地化数据
-    wp_localize_script('article-tabs-admin', 'articleTabsSettings', array(
-        'nonce' => wp_create_nonce('article_tabs_settings'),
-        'ajaxurl' => admin_url('admin-ajax.php') // 添加 AJAX URL
-    ));
-}
-add_action('admin_enqueue_scripts', 'enqueue_article_tabs_admin_assets');
