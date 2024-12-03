@@ -18,12 +18,19 @@ function add_custom_post_status() {
 }
 add_action('init', 'add_custom_post_status');
 
-// 处理文章编辑提交
+// 处理文章编辑
 function handle_post_edit() {
+    // 验证nonce
     if (!isset($_POST['edit_post_nonce']) || !wp_verify_nonce($_POST['edit_post_nonce'], 'edit_post')) {
         wp_die('安全验证失败');
     }
 
+    // 检查用户权限
+    if (!is_user_logged_in()) {
+        wp_die('请先登录');
+    }
+
+    // 获取文章ID
     $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
     $post_title = isset($_POST['post_title']) ? sanitize_text_field($_POST['post_title']) : '';
     $post_content = isset($_POST['post_content']) ? wp_kses_post($_POST['post_content']) : '';
@@ -32,23 +39,23 @@ function handle_post_edit() {
     // 获取原文章
     $post = get_post($post_id);
     if (!$post) {
-        wp_die('文章不存在');
+        wp_die('没有编辑权限');
     }
 
     // 创建新的修订版本
     $revision_data = array(
-        'post_type'    => 'revision',
-        'post_title'   => $post_title,
+        'post_type' => 'revision',
+        'post_title' => $post_title,
         'post_content' => $post_content,
-        'post_parent'  => $post_id,
-        'post_author'  => get_current_user_id(),
-        'post_status'  => 'pending'  // 修订版本状态为待审核
+        'post_parent' => $post_id,
+        'post_author' => get_current_user_id(),
+        'post_status' => 'pending'  // 修订版本状态为待审核
     );
 
-    // 插入修订版本
+    // 保存修订版本
     $revision_id = wp_insert_post($revision_data);
 
-    if ($revision_id) {
+    if (!is_wp_error($revision_id)) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'post_edit_summaries';
         
@@ -63,7 +70,7 @@ function handle_post_edit() {
             ),
             array('%d', '%d', '%d', '%s')
         );
-        
+
         // 通知管理员
         $admin_users = get_users(array('role' => 'administrator'));
         foreach ($admin_users as $admin) {
@@ -81,21 +88,32 @@ function handle_post_edit() {
             'edit_submitted'
         );
 
-        wp_redirect(add_query_arg('edited', '1', get_permalink($post_id)));
+        if (wp_doing_ajax()) {
+            wp_send_json_success(array(
+                'message' => '文章更新成功！',
+                'redirect_url' => add_query_arg('edited', '1', get_permalink($post_id))
+            ));
+        } else {
+            wp_redirect(add_query_arg('edited', '1', get_permalink($post_id)));
+        }
         exit;
     }
 
-    wp_die('保存修订版本失败');
+    if (wp_doing_ajax()) {
+        wp_send_json_error(array('message' => '保存失败，请稍后重试'));
+    } else {
+        wp_die('保存修订版本失败');
+    }
 }
+
+add_action('wp_ajax_edit_post', 'handle_post_edit');
 add_action('admin_post_edit_post', 'handle_post_edit');
-add_action('admin_post_nopriv_edit_post', 'handle_post_edit');
 
 // 添加编辑页面资源
 function add_edit_post_assets() {
     if (is_page_template('page-edit-post.php')) {
-        wp_enqueue_script('markdown-it', 'https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js', array(), null, true);
         wp_enqueue_style('edit-post-style', get_template_directory_uri() . '/assets/css/edit-post.css');
-        wp_enqueue_script('edit-post-script', get_template_directory_uri() . '/assets/js/edit-post.js', array('jquery', 'markdown-it'), null, true);
+        wp_enqueue_script('edit-post-script', get_template_directory_uri() . '/assets/js/edit-post.js', array('jquery'), null, true);
         
         wp_localize_script('edit-post-script', 'editPost', array(
             'ajaxurl' => admin_url('admin-ajax.php'),

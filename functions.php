@@ -146,7 +146,14 @@ function my_theme_enqueue_scripts() {
     }
 
     if (is_page_template('page-submit-post.php')) {
-        wp_enqueue_style('submit-post-style', get_template_directory_uri() . '/assets/css/submit-post.css');
+        wp_enqueue_style('edit-post-style', get_template_directory_uri() . '/assets/css/edit-post.css');
+        wp_enqueue_style('vditor-css', 'https://cdn.jsdelivr.net/npm/vditor/dist/index.css');
+        wp_enqueue_script('vditor', 'https://cdn.jsdelivr.net/npm/vditor/dist/index.min.js', array('jquery'), null, true);
+        wp_enqueue_script('submit-post', get_template_directory_uri() . '/assets/js/submit-post.js', array('jquery', 'vditor'), '1.0', true);
+        wp_localize_script('submit-post', 'wpVars', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('wp_rest')
+        ));
     }
 
     wp_enqueue_style('post-list-style', get_template_directory_uri() . '/assets/css/post-list.css', array(), '1.0');
@@ -243,7 +250,7 @@ function check_user_center_access() {
 }
 add_action('template_redirect', 'check_user_center_access');
 
-// ��能优化
+// 能优化
 function optimize_post_pages() {
     if (is_page_template(['page-submit-post.php', 'page-edit-post.php'])) {
         wp_enqueue_script('jquery');
@@ -373,3 +380,22 @@ function load_article_tabs_files() {
     require_once get_template_directory() . '/inc/article-tabs-ajax.php';
 }
 add_action('after_setup_theme', 'load_article_tabs_files');
+
+// 添加 Markdown 渲染支持
+function enqueue_markdown_assets() {
+    // 在文章页面和存档页面加载
+    if (is_single() || is_archive() || is_home()) {
+        wp_enqueue_script('marked-js', 'https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js', array('jquery'), null, true);
+        wp_enqueue_script('markdown-render', get_template_directory_uri() . '/assets/js/markdown-render.js', array('jquery', 'marked-js'), '1.0', true);
+    }
+}
+add_action('wp_enqueue_scripts', 'enqueue_markdown_assets');
+
+// 添加文章内容过滤器
+function render_markdown_content($content) {
+    if (is_single() || is_archive() || is_home()) {
+        return '<div class="markdown-content">' . $content . '</div>';
+    }
+    return $content;
+}
+add_filter('the_content', 'render_markdown_content');

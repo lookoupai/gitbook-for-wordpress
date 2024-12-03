@@ -5,46 +5,52 @@
 主题文件结构：
 ```
 theme-root/
-├── inc/                           # 功能模块目录
-│   ├── notifications.php          # 通知系统
-│   ├── user-center-functions.php  # 用户中心功能
-│   ├── post-submission.php        # 文章投稿功能
-│   ├── post-editing.php          # 文章编辑功能
-│   ├── voting-functions.php      # 投票系统功能
-│   ├── voting-settings.php       # 投票系统设置
-│   ├── article-tabs-ajax.php     # 文章标签页AJAX处理
-│   ├── article-tabs-settings.php # 文章标签页设置
-│   └── comments.php              # 评论系统功能
-├── assets/                       # 主题资源文件
-│   ├── css/                      # 样式文件目录
-│   │   ├── menu.css             # 菜单样式
-│   │   ├── voting.css           # 投票页面样式
-│   │   ├── comments.css         # 评论样式
-│   │   ├── article-tabs.css     # 文章标签页样式
-│   │   └── login-register.css   # 登录注册样式
-│   └── js/                      # JavaScript文件目录
-│       ├── article-tabs.js      # 文章标签页前端脚本
-│       ├── article-tabs-admin.js # 文章标签页管理脚本
-│       ├── voting.js            # 投票功能脚本
-│       ├── comment-actions.js   # 评论功能脚本
-│       ├── edit-post.js         # 文章编辑脚本
-│       ├── markdown-editor.js   # Markdown编辑器
-│       └── user-center.js       # 用户中心脚本
-├── template-parts/              # 模板部件目录
-│   └── user/                    # 用户相关模板
-│       └── notifications.php    # 通知显示模板
-├── page-*.php                   # 页面模板文件
-│   ├── page-article-tabs.php    # 文章标签页模板
-│   ├── page-login.php          # 登录页面模板
-│   ├── page-register.php       # 注册页面模板
-│   ├── page-user-center.php    # 用户中心页面
-│   ├── page-submit-post.php    # 文章提交页面
-│   ├── page-edit-post.php      # 文章编辑页面
-│   └── page-community-voting.php # 社区投票页面
-├── functions.php               # 主题核心功能和模块加载
-├── style.scss                 # SCSS源文件
-├── style.css                  # 编译后的CSS文件
-└── package.json               # 依赖包配置文件
+├── inc/ # 功能模块目录
+│ ├── notifications.php # 通知系统
+│ ├── user-center-functions.php # 用户中心功能
+│ ├── post-submission.php # 文章投稿功能
+│ ├── post-editing.php # 文章编辑功能
+│ ├── voting-functions.php # 投票系统功能
+│ ├── voting-settings.php # 投票系统设置
+│ ├── article-tabs-ajax.php # 文章标签页AJAX处理
+│ ├── article-tabs-settings.php # 文章标签页设置
+│ └── comments.php # 评论系统功能
+├── assets/ # 主题资源文件
+│ ├── css/ # 样式文件目录
+│ │ ├── menu.css # 菜单样式
+│ │ ├── voting.css # 投票页面样式
+│ │ ├── comments.css # 评论样式
+│ │ ├── article-tabs.css # 文章标签页样式
+│ │ └── login-register.css # 登录注册样式
+│ └── js/ # JavaScript文件目录
+│ ├── article-tabs.js # 文章标签页前端脚本
+│ ├── article-tabs-admin.js # 文章标签页管理脚本
+│ ├── voting.js # 投票功能脚本
+│ ├── comment-actions.js # 评论功能脚本
+│ ├── edit-post.js # 文章编辑脚本
+│ ├── markdown-render.js # Markdown渲染脚本
+│ └── user-center.js # 用户中心脚本
+├── templates/ # 页面模板目录
+│ ├── page-user-center.php # 用户中心页面
+│ ├── page-edit-post.php # 文章编辑页面
+│ ├── page-submit-post.php # 文章投稿页面
+│ ├── page-community-voting.php # 社区投票页面
+│ └── page-article-tabs.php # 文章标签页模板
+├── docs/ # 文档目录
+│ ├── markdown-support.md # Markdown支持说明
+│ └── DEVELOPMENT.md # 开发文档
+├── style.css # 主题样式
+├── functions.php # 主题函数
+├── header.php # 页头模板
+├── footer.php # 页脚模板
+├── index.php # 主页模板
+├── single.php # 文章页模板
+├── archive.php # 归档页模板
+├── search.php # 搜索页模板
+├── 404.php # 404页面
+├── screenshot.png # 主题预览图
+├── README.md # 项目说明
+└── LICENSE # 开源协议
 ```
 
 ## 功能模块说明
@@ -295,6 +301,13 @@ CREATE TABLE wp_post_votes (
 - 改进了文章列表在不同设备上的显示效果
 - 添加了标签按钮自动换行功能
 - 优化了触摸设备的操作体验
+
+### 4. Markdown编辑器优化
+- 使用 Vditor 替换原有 Markdown 编辑器
+- 优化图片上传功能
+- 改进编辑器工具栏
+- 保留原有 Markdown 渲染功能
+- 删除废弃的编辑器代码
 
 ### 新增/修改的文件
 ```

@@ -89,25 +89,6 @@ function ajax_handle_post_submission() {
 }
 add_action('wp_ajax_handle_post_submission', 'ajax_handle_post_submission');
 
-// 添加投稿页面资源
-function add_submission_assets() {
-    if (is_page_template('page-submit-post.php')) {
-        // 加载 Markdown 编辑器
-        wp_enqueue_script('markdown-it', 'https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js', array(), null, true);
-        wp_enqueue_script('markdown-editor', get_template_directory_uri() . '/js/markdown-editor.js', array('jquery', 'markdown-it'), '1.0', true);
-        
-        // 加载样式
-        wp_enqueue_style('submit-post-style', get_template_directory_uri() . '/assets/css/submit-post.css');
-        
-        // 本地化脚本
-        wp_localize_script('markdown-editor', 'submitPost', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('submit_post_nonce')
-        ));
-    }
-}
-add_action('wp_enqueue_scripts', 'add_submission_assets');
-
 // 处理表单提交
 function handle_post_submission() {
     // 验证nonce

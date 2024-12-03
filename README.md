@@ -31,7 +31,9 @@ GitBook For WordPress
 2. Markdown 支持
    - 评论支持 Markdown：支持粗体、斜体、代码、链接等格式
    - 实时预览：编写评论时可实时预览 Markdown 效果
-   - 工具栏：提供常用 Markdown 语法快捷插入按钮
+   - Vditor 编辑器：提供专业的 Markdown 编辑体验
+   - 图片上传：支持图片链接插入和描述
+   - 实时渲染：所有 Markdown 内容自动渲染
 
 3. 用户中心功能
    - 个人资料：修改显示名称、邮箱、个人简介等
