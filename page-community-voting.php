@@ -19,6 +19,14 @@ get_header();
     </div>
 
     <main id="main" class="site-main right-content">
+        <?php
+        // 获取并显示公告
+        $announcement = get_option('voting_announcement');
+        if (!empty($announcement)) {
+            echo '<div class="voting-announcement">' . wp_kses_post($announcement) . '</div>';
+        }
+        ?>
+        
         <header class="page-header">
             <h1 class="page-title">社区投票</h1>
             <div class="vote-type-tabs">

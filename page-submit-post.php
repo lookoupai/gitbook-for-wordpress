@@ -112,11 +112,13 @@ get_header();
 
                 <div class="form-group">
                     <label for="post_tags">标签</label>
-                    <input type="text" id="post_tags" name="post_tags" 
-                           placeholder="用逗号分隔多个标签，如：标签1, 标签2">
+                    <input type="text" id="post_tags" name="post_tags" placeholder="用逗号分隔多个标签">
                 </div>
 
-                <button type="submit" class="submit-button">提交文章</button>
+                <div class="button-group">
+                    <button type="button" class="cancel-button" onclick="history.back()">取消</button>
+                    <button type="submit" class="submit-button">提交文章</button>
+                </div>
             </form>
         </div>
 

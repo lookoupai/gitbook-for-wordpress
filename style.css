@@ -990,3 +990,24 @@ header .search-and-menu .top-menu-btn:hover {
 .markdown-content table tr:nth-child(2n) {
     background-color: #f6f8fa;
 }
+
+.sidebar-divider {
+    margin: 15px 0 10px;
+    border-top: 1px solid #eee;
+}
+
+.theme-credit {
+    padding: 0 15px 15px;
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.theme-credit a {
+    color: #635753;
+    text-decoration: none;
+}
+
+.theme-credit a:hover {
+    text-decoration: underline;
+}

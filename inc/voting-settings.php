@@ -32,6 +32,10 @@ function display_voting_settings_page() {
         $approve_ratio = floatval($_POST['approve_ratio']);
         update_option('voting_approve_ratio', $approve_ratio);
         
+        // 保存公告设置
+        $announcement = wp_kses_post($_POST['voting_announcement']);
+        update_option('voting_announcement', $announcement);
+        
         echo '<div class="updated"><p>设置已保存</p></div>';
     }
     
@@ -39,6 +43,7 @@ function display_voting_settings_page() {
     $min_months = get_option('voting_min_register_months', 3);
     $required_votes = get_option('voting_votes_required', 10);
     $approve_ratio = get_option('voting_approve_ratio', 0.6);
+    $announcement = get_option('voting_announcement', '');
     ?>
     
     <div class="wrap">
@@ -47,6 +52,27 @@ function display_voting_settings_page() {
         <form method="post" action="">
             <?php wp_nonce_field('voting_settings_nonce'); ?>
             
+            <!-- 添加公告设置 -->
+            <h2>公告设置</h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="voting_announcement">公告内容</label>
+                    </th>
+                    <td>
+                        <textarea id="voting_announcement" 
+                                name="voting_announcement" 
+                                rows="5" 
+                                style="width: 100%;"
+                                placeholder="留空则不显示公告"><?php 
+                            echo esc_textarea($announcement); 
+                        ?></textarea>
+                        <p class="description">支持HTML，可以添加链接等</p>
+                    </td>
+                </tr>
+            </table>
+            
+            <h2>投票设置</h2>
             <table class="form-table">
                 <tr>
                     <th scope="row">

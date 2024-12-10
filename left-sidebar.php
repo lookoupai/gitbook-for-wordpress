@@ -67,6 +67,10 @@ if ($category_slug) {
         );
         wp_nav_menu($menu_args);
         ?>
+        <hr class="sidebar-divider">
+        <div class="theme-credit">
+            本站使用 <a href="https://github.com/lookoupai/gitbook-for-wordpress" target="_blank">Gitbook For Wordpress</a> 主题 BY <a href="https://233heji.com/" target="_blank">合集网</a>
+        </div>
     </ul>
 <?php } ?>
 

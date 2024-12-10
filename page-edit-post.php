@@ -71,7 +71,15 @@ get_header();
                                value="<?php echo get_the_tag_list('', ', ', '', $post_id); ?>">
                     </div>
 
-                    <button type="submit" class="submit-button">提交修改</button>
+                    <div class="form-group">
+                        <label for="edit_summary">修改说明</label>
+                        <textarea id="edit_summary" name="edit_summary" required></textarea>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="button" class="cancel-button" onclick="history.back()">取消</button>
+                        <button type="submit" class="submit-button">保存修改</button>
+                    </div>
                 </form>
             <?php else : ?>
                 <p>文章不存在或您没有权限编辑。</p>

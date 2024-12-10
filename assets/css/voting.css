@@ -500,4 +500,28 @@ table.diff .diff-addedline ins {
 button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* 投票公告样式 */
+.voting-announcement {
+    margin: 20px 0;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.voting-announcement p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.voting-announcement a {
+    color: #635753;
+    text-decoration: underline;
+}
+
+.voting-announcement a:hover {
+    color: #4a413e;
 } 
