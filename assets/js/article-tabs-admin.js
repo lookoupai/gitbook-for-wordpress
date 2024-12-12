@@ -52,9 +52,30 @@ jQuery(document).ready(function($) {
         clearCache('all', $(this), $('#clear-all-status'));
     });
     
-    // 分类过滤选项切换
-    $('input[name$="[category_filter]"]').on('change', function() {
+    // 修改分类过滤选项切换的处理
+    $('input[name$="[category_filter]"]').each(function() {
+        // 页面加载时初始化显示状态
         var wrapper = $(this).closest('.tab-category-settings').find('.category-select-wrapper');
+        if ($(this).is(':checked')) {
+            if ($(this).val() === 'none') {
+                wrapper.hide();
+            } else {
+                wrapper.show();
+            }
+        }
+    }).on('change', function() {
+        var wrapper = $(this).closest('.tab-category-settings').find('.category-select-wrapper');
+        if ($(this).val() === 'none') {
+            wrapper.slideUp();
+        } else {
+            wrapper.slideDown();
+        }
+    });
+
+    // 为所有分类过滤radio按钮添加change事件
+    $('.tab-category-settings input[type="radio"]').on('change', function() {
+        var wrapper = $(this).closest('.tab-category-settings').find('.category-select-wrapper');
+        
         if ($(this).val() === 'none') {
             wrapper.slideUp();
         } else {

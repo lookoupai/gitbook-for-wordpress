@@ -1,0 +1,20 @@
+.tab-category-settings {
+    margin-top: 10px;
+}
+
+.tab-category-settings label {
+    margin-right: 20px;
+}
+
+.category-select-wrapper {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+}
+
+.category-select {
+    width: 100%;
+    max-width: 400px;
+    height: 150px;
+}

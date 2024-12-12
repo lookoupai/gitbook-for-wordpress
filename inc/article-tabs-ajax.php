@@ -332,3 +332,26 @@ function get_category_query_args($type, $settings) {
     
     return $args;
 } 
+
+// 添加AJAX处理函数
+add_action('wp_ajax_get_categories_list', 'get_categories_list_callback');
+
+function get_categories_list_callback() {
+    $categories = get_categories(array(
+        'hide_empty' => false
+    ));
+    
+    $html = '<select multiple class="category-select">';
+    foreach ($categories as $category) {
+        $html .= sprintf(
+            '<option value="%d">%s</option>',
+            $category->term_id,
+            esc_html($category->name)
+        );
+    }
+    $html .= '</select>';
+    $html .= '<p class="description">按住 Ctrl/Command 键可多选</p>';
+    
+    echo $html;
+    wp_die();
+} 

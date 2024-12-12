@@ -26,13 +26,23 @@ function article_tabs_settings_page() {
         return;
     }
     
+    // 获取所有分类
+    $categories = get_categories(array('hide_empty' => false));
+    
     $settings = get_option('article_tabs_settings', array(
         'posts_per_page' => 10,
         'excerpt_length' => 200,
-        'cache_time_latest' => 24,     // 最新文章缓存时间(小时)
-        'cache_time_updated' => 24,    // 最近修改缓存时间(小时)
-        'cache_time_popular' => 24,    // 热门文章缓存时间(小时)
-        'cache_time_rss' => 5,         // RSS内容缓存时间(小时)
+        'cache_time_latest' => 24,
+        'cache_time_updated' => 24,
+        'cache_time_popular' => 24,
+        'cache_time_rss' => 5,
+        // 添加默认的分类过滤设置
+        'latest_category_filter' => 'none',
+        'latest_categories' => array(),
+        'updated_category_filter' => 'none',
+        'updated_categories' => array(),
+        'popular_category_filter' => 'none', 
+        'popular_categories' => array()
     ));
     
     $custom_tabs = get_option('article_custom_tabs', array());
@@ -85,23 +95,27 @@ function article_tabs_settings_page() {
                                    <?php checked(isset($settings['latest_enabled']) && $settings['latest_enabled']); ?>>
                             启用最新文章列表
                         </label>
-                        <div class="tab-category-settings" style="margin-top: 10px;">
-                            <p>
-                                <label><input type="radio" name="article_tabs_settings[latest_category_filter]" value="none" 
-                                       <?php checked(!isset($settings['latest_category_filter']) || $settings['latest_category_filter'] === 'none'); ?>>
-                                    不限制分类</label>
-                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[latest_category_filter]" value="include" 
-                                       <?php checked(isset($settings['latest_category_filter']) && $settings['latest_category_filter'] === 'include'); ?>>
-                                    仅包含以下分类</label>
-                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[latest_category_filter]" value="exclude" 
-                                       <?php checked(isset($settings['latest_category_filter']) && $settings['latest_category_filter'] === 'exclude'); ?>>
-                                    排除以下分类</label>
-                            </p>
-                            <div class="category-select-wrapper" style="display: <?php echo (!isset($settings['latest_category_filter']) || $settings['latest_category_filter'] === 'none') ? 'none' : 'block'; ?>;">
-                                <select name="article_tabs_settings[latest_categories][]" multiple style="width: 100%; max-width: 400px; height: 100px;">
+                        <div class="tab-category-settings">
+                            <label>
+                                <input type="radio" name="article_tabs_settings[latest_category_filter]" value="none" 
+                                       <?php checked($settings['latest_category_filter'], 'none'); ?>>
+                                不限制分类
+                            </label>
+                            <label>
+                                <input type="radio" name="article_tabs_settings[latest_category_filter]" value="include" 
+                                       <?php checked($settings['latest_category_filter'], 'include'); ?>>
+                                仅包含以下分类
+                            </label>
+                            <label>
+                                <input type="radio" name="article_tabs_settings[latest_category_filter]" value="exclude" 
+                                       <?php checked($settings['latest_category_filter'], 'exclude'); ?>>
+                                排除以下分类
+                            </label>
+                            
+                            <div class="category-select-wrapper" style="display: <?php echo ($settings['latest_category_filter'] === 'none') ? 'none' : 'block'; ?>;">
+                                <select name="article_tabs_settings[latest_categories][]" multiple class="category-select">
                                     <?php
                                     $selected_cats = isset($settings['latest_categories']) ? (array)$settings['latest_categories'] : array();
-                                    $categories = get_categories(array('hide_empty' => false));
                                     foreach ($categories as $category) {
                                         printf(
                                             '<option value="%s" %s>%s</option>',
@@ -127,20 +141,25 @@ function article_tabs_settings_page() {
                                    <?php checked(isset($settings['updated_enabled']) && $settings['updated_enabled']); ?>>
                             启用最近修改列表
                         </label>
-                        <div class="tab-category-settings" style="margin-top: 10px;">
-                            <p>
-                                <label><input type="radio" name="article_tabs_settings[updated_category_filter]" value="none" 
-                                       <?php checked(!isset($settings['updated_category_filter']) || $settings['updated_category_filter'] === 'none'); ?>>
-                                    不限制分类</label>
-                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[updated_category_filter]" value="include" 
-                                       <?php checked(isset($settings['updated_category_filter']) && $settings['updated_category_filter'] === 'include'); ?>>
-                                    仅包含以下分类</label>
-                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[updated_category_filter]" value="exclude" 
-                                       <?php checked(isset($settings['updated_category_filter']) && $settings['updated_category_filter'] === 'exclude'); ?>>
-                                    排除以下分类</label>
-                            </p>
-                            <div class="category-select-wrapper" style="display: <?php echo (!isset($settings['updated_category_filter']) || $settings['updated_category_filter'] === 'none') ? 'none' : 'block'; ?>;">
-                                <select name="article_tabs_settings[updated_categories][]" multiple style="width: 100%; max-width: 400px; height: 100px;">
+                        <div class="tab-category-settings">
+                            <label>
+                                <input type="radio" name="article_tabs_settings[updated_category_filter]" value="none" 
+                                       <?php checked($settings['updated_category_filter'], 'none'); ?>>
+                                不限制分类
+                            </label>
+                            <label>
+                                <input type="radio" name="article_tabs_settings[updated_category_filter]" value="include" 
+                                       <?php checked($settings['updated_category_filter'], 'include'); ?>>
+                                仅包含以下分类
+                            </label>
+                            <label>
+                                <input type="radio" name="article_tabs_settings[updated_category_filter]" value="exclude" 
+                                       <?php checked($settings['updated_category_filter'], 'exclude'); ?>>
+                                排除以下分类
+                            </label>
+                            
+                            <div class="category-select-wrapper" style="display: <?php echo ($settings['updated_category_filter'] === 'none') ? 'none' : 'block'; ?>;">
+                                <select name="article_tabs_settings[updated_categories][]" multiple class="category-select">
                                     <?php
                                     $selected_cats = isset($settings['updated_categories']) ? (array)$settings['updated_categories'] : array();
                                     foreach ($categories as $category) {
@@ -168,20 +187,25 @@ function article_tabs_settings_page() {
                                    <?php checked(isset($settings['popular_enabled']) && $settings['popular_enabled']); ?>>
                             启用热门文章列表
                         </label>
-                        <div class="tab-category-settings" style="margin-top: 10px;">
-                            <p>
-                                <label><input type="radio" name="article_tabs_settings[popular_category_filter]" value="none" 
-                                       <?php checked(!isset($settings['popular_category_filter']) || $settings['popular_category_filter'] === 'none'); ?>>
-                                    不限制分类</label>
-                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[popular_category_filter]" value="include" 
-                                       <?php checked(isset($settings['popular_category_filter']) && $settings['popular_category_filter'] === 'include'); ?>>
-                                    仅包含以下分类</label>
-                                <label style="margin-left: 20px;"><input type="radio" name="article_tabs_settings[popular_category_filter]" value="exclude" 
-                                       <?php checked(isset($settings['popular_category_filter']) && $settings['popular_category_filter'] === 'exclude'); ?>>
-                                    排除以下分类</label>
-                            </p>
-                            <div class="category-select-wrapper" style="display: <?php echo (!isset($settings['popular_category_filter']) || $settings['popular_category_filter'] === 'none') ? 'none' : 'block'; ?>;">
-                                <select name="article_tabs_settings[popular_categories][]" multiple style="width: 100%; max-width: 400px; height: 100px;">
+                        <div class="tab-category-settings">
+                            <label>
+                                <input type="radio" name="article_tabs_settings[popular_category_filter]" value="none" 
+                                       <?php checked($settings['popular_category_filter'], 'none'); ?>>
+                                不限制分类
+                            </label>
+                            <label>
+                                <input type="radio" name="article_tabs_settings[popular_category_filter]" value="include" 
+                                       <?php checked($settings['popular_category_filter'], 'include'); ?>>
+                                仅包含以下分类
+                            </label>
+                            <label>
+                                <input type="radio" name="article_tabs_settings[popular_category_filter]" value="exclude" 
+                                       <?php checked($settings['popular_category_filter'], 'exclude'); ?>>
+                                排除以下分类
+                            </label>
+                            
+                            <div class="category-select-wrapper" style="display: <?php echo ($settings['popular_category_filter'] === 'none') ? 'none' : 'block'; ?>;">
+                                <select name="article_tabs_settings[popular_categories][]" multiple class="category-select">
                                     <?php
                                     $selected_cats = isset($settings['popular_categories']) ? (array)$settings['popular_categories'] : array();
                                     foreach ($categories as $category) {
@@ -284,7 +308,7 @@ function article_tabs_settings_page() {
                 '<input type="text" name="article_custom_tabs[' + tabIndex + '][title]" class="regular-text" required>' +
                 '<textarea name="article_custom_tabs[' + tabIndex + '][content]" rows="3" class="large-text" required></textarea>' +
                 '<label><input type="checkbox" name="article_custom_tabs[' + tabIndex + '][login_required]" value="1">仅登录用户可见</label>' +
-                '<button type="button" class="button remove-tab">删除</button>' +
+                '<button type="button" class="button remove-tab">��除</button>' +
                 '</div>');
             $('#custom-tabs').append(newTab);
             tabIndex++;
