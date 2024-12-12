@@ -219,4 +219,46 @@
 .tab-nav a {
     color: #fff !important;
     text-decoration: none !important;
+}
+
+/* 标签排序样式 */
+.tabs-order-container {
+    max-width: 600px;
+    margin: 20px 0;
+}
+
+#tabs-order-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+}
+
+.tab-item {
+    padding: 12px 15px;
+    margin: 0;
+    border-bottom: 1px solid #ccd0d4;
+    background: #fff;
+    cursor: move;
+    display: flex;
+    align-items: center;
+}
+
+.tab-item:last-child {
+    border-bottom: none;
+}
+
+.tab-item .dashicons {
+    color: #666;
+    margin-right: 10px;
+}
+
+.tab-item:hover {
+    background: #f8f9fa;
+}
+
+.tabs-order-notice {
+    margin-top: 15px;
+    color: #666;
 } 

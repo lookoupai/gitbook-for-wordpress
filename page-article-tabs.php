@@ -16,39 +16,78 @@ get_header(); ?>
         <div class="article-tabs">
             <div class="tab-nav">
                 <?php
-                // 获取设置
+                // 获取当前标签
+                $current_tab = get_query_var('tab', 'latest');
+                
+                // 获取标签顺序
+                $tabs_order = get_option('article_tabs_order', array());
                 $settings = get_option('article_tabs_settings', array(
                     'latest_enabled' => true,    // 默认启用最新文章
                     'updated_enabled' => false,  // 默认禁用最近修改
                     'popular_enabled' => false   // 默认禁用热门文章
                 ));
+                
+                if(empty($tabs_order)) {
+                    // 如果没有保存的顺序,使用默认顺序
+                    $tabs_order = array('latest', 'updated', 'popular');
+                }
+                
+                // 获取所有启用的标签
+                $enabled_tabs = array();
+                if(!empty($settings['latest_enabled'])) $enabled_tabs['latest'] = array(
+                    'name' => '最新文章',
+                    'url' => home_url('/tabs/latest/')
+                );
+                if(!empty($settings['updated_enabled'])) $enabled_tabs['updated'] = array(
+                    'name' => '最近修改',
+                    'url' => home_url('/tabs/updated/')
+                );
+                if(!empty($settings['popular_enabled'])) $enabled_tabs['popular'] = array(
+                    'name' => '热门文章',
+                    'url' => home_url('/tabs/popular/')
+                );
 
-                // 显示启用的标签
-                if ($settings['latest_enabled']) : ?>
-                    <button class="tab-btn" data-tab="latest">最新文章</button>
-                <?php endif; ?>
-                
-                <?php if ($settings['updated_enabled']) : ?>
-                    <button class="tab-btn" data-tab="updated">最近修改</button>
-                <?php endif; ?>
-                
-                <?php if ($settings['popular_enabled']) : ?>
-                    <button class="tab-btn" data-tab="popular">热门文章</button>
-                <?php endif; ?>
-                
-                <?php
-                // 获取自定义标签
+                // 添加自定义标签
                 $custom_tabs = get_option('article_custom_tabs', array());
-                foreach ($custom_tabs as $index => $tab) :
-                    // 检查是否需要登录可见
-                    if (!empty($tab['login_required']) && !is_user_logged_in()) {
-                        continue; // 跳过不显示需要登录的标签
+                if(is_array($custom_tabs)) {
+                    foreach ($custom_tabs as $index => $tab) {
+                        // 检查标签是否有标题
+                        if(empty($tab['title'])) continue;
+                        
+                        // 检查是否需要登录可见
+                        if (!empty($tab['login_required']) && !is_user_logged_in()) {
+                            continue;
+                        }
+                        $enabled_tabs['custom_'.$index] = array(
+                            'name' => esc_html($tab['title']),
+                            'url' => home_url('/tabs/custom_' . $index . '/')
+                        );
                     }
+                }
+
+                // 按保存的顺序显示标签
+                foreach($tabs_order as $tab_id) {
+                    if(isset($enabled_tabs[$tab_id])) {
+                        printf(
+                            '<button class="tab-btn%s" data-tab="%s">%s</button>',
+                            $current_tab === $tab_id ? ' active' : '',
+                            esc_attr($tab_id),
+                            esc_html($enabled_tabs[$tab_id]['name'])
+                        );
+                        unset($enabled_tabs[$tab_id]);
+                    }
+                }
+
+                // 显示未排序的标签
+                foreach($enabled_tabs as $tab_id => $tab_info) {
+                    printf(
+                        '<button class="tab-btn%s" data-tab="%s">%s</button>',
+                        $current_tab === $tab_id ? ' active' : '',
+                        esc_attr($tab_id),
+                        esc_html($tab_info['name'])
+                    );
+                }
                 ?>
-                    <button class="tab-btn" data-tab="custom_<?php echo $index; ?>">
-                        <?php echo esc_html($tab['title']); ?>
-                    </button>
-                <?php endforeach; ?>
             </div>
             
             <!-- 文章列表容器 -->

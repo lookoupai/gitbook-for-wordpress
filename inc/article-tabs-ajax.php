@@ -5,6 +5,7 @@ if (!defined('ABSPATH')) exit;
 function register_article_tabs_ajax() {
     add_action('wp_ajax_get_tab_content', 'handle_get_tab_content');
     add_action('wp_ajax_nopriv_get_tab_content', 'handle_get_tab_content');
+    add_action('wp_ajax_save_tabs_order', 'save_tabs_order');
 }
 add_action('init', 'register_article_tabs_ajax');
 
@@ -125,7 +126,7 @@ function handle_get_tab_content() {
             break;
             
         default:
-            $cache_time = 24 * HOUR_IN_SECONDS; // 默认24小时
+            $cache_time = 24 * HOUR_IN_SECONDS; // 默认24时
     }
     
     $query = new WP_Query($args);
@@ -252,7 +253,7 @@ function get_articles_pagination_html($max_pages, $current_page) {
     return $output;
 }
 
-// 添加清理缓存的AJAX处理函数
+// 添加清理缓存的AJAX处理��数
 function handle_clear_article_tabs_cache() {
     check_ajax_referer('article_tabs_settings', 'nonce');
     
@@ -350,8 +351,45 @@ function get_categories_list_callback() {
         );
     }
     $html .= '</select>';
-    $html .= '<p class="description">按住 Ctrl/Command 键可多选</p>';
+    $html .= '<p class="description">按 Ctrl/Command 键可多选</p>';
     
     echo $html;
     wp_die();
 } 
+
+// 处理标签排序保存
+function save_tabs_order() {
+    // 验证nonce
+    if(!check_ajax_referer('article_tabs_settings', 'nonce', false)) {
+        wp_send_json_error('无效的请求');
+        return;
+    }
+    
+    // 验证权限
+    if(!current_user_can('manage_options')) {
+        wp_send_json_error('权限不足');
+        return;
+    }
+    
+    // 获取并保存排序
+    $order = isset($_POST['order']) ? (array)$_POST['order'] : array();
+    if(!is_array($order)) {
+        wp_send_json_error('数据格式错误');
+        return;
+    }
+    
+    if(empty($order)) {
+        wp_send_json_error('排序数据为空');
+        return;
+    }
+    
+    $order = array_filter($order, 'is_string');
+    $order = array_values($order);
+    
+    update_option('article_tabs_order', array_map('sanitize_text_field', $order));
+    
+    // 清除可能的缓存
+    wp_cache_delete('article_tabs_order', 'options');
+    
+    wp_send_json_success();
+}

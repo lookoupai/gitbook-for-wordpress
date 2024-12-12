@@ -82,4 +82,40 @@ jQuery(document).ready(function($) {
             wrapper.slideDown();
         }
     });
+
+    // 初始化排序功能
+    if($('#tabs-order-list').length) {
+        $('#tabs-order-list').sortable({
+            handle: '.dashicons-menu',
+            update: function(event, ui) {
+                // 获取排序后的顺序
+                const order = $(this).sortable('toArray', {attribute: 'data-id'});
+                
+                // 保存排序
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'save_tabs_order',
+                        order: order,
+                        nonce: articleTabsSettings.nonce
+                    },
+                    success: function(response) {
+                        if(response.success) {
+                            // 显示成功提示
+                            const notice = $('<div class="notice notice-success"><p>排序已保存</p></div>')
+                                .insertAfter('#tabs-order-list')
+                                .fadeOut(2000, function() {
+                                    $(this).remove();
+                                });
+                        } else {
+                            // 添加错误提示
+                            console.error('保存失败:', response.data);
+                            alert('保存失败: ' + response.data);
+                        }
+                    }
+                });
+            }
+        });
+    }
 }); 

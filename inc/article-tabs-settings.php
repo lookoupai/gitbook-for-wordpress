@@ -17,6 +17,16 @@ add_action('admin_menu', 'article_tabs_settings_menu');
 function article_tabs_register_settings() {
     register_setting('article_tabs_options', 'article_tabs_settings');
     register_setting('article_tabs_options', 'article_custom_tabs');
+    register_setting('article_tabs_options', 'article_tabs_order', array(
+        'type' => 'array',
+        'default' => array(),
+        'sanitize_callback' => function($value) {
+            if(!is_array($value)) {
+                return array();
+            }
+            return array_map('sanitize_text_field', $value);
+        }
+    ));
 }
 add_action('admin_init', 'article_tabs_register_settings');
 
@@ -284,6 +294,7 @@ function article_tabs_settings_page() {
                            value="<?php echo esc_attr($tab['title']); ?>" class="regular-text" required>
                     <textarea name="article_custom_tabs[<?php echo $index; ?>][content]" 
                               rows="3" class="large-text" required><?php echo esc_textarea($tab['content']); ?></textarea>
+                    <input type="hidden" name="article_custom_tabs[<?php echo $index; ?>][enabled]" value="1">
                     <label>
                         <input type="checkbox" name="article_custom_tabs[<?php echo $index; ?>][login_required]" value="1" 
                                <?php checked(isset($tab['login_required']) && $tab['login_required']); ?>>
@@ -294,6 +305,67 @@ function article_tabs_settings_page() {
                 <?php endforeach; ?>
             </div>
             <button type="button" class="button" id="add-tab">添加标签</button>
+            
+            <div class="tab-content" id="tab-order">
+                <h2>标签排序</h2>
+                <div class="tabs-order-container">
+                    <ul id="tabs-order-list">
+                        <?php
+                        $tabs_order = get_option('article_tabs_order', array());
+                        // 确保 $tabs_order 是数组
+                        if(!is_array($tabs_order)) {
+                            $tabs_order = array();
+                        }
+
+                        $settings = get_option('article_tabs_settings');
+                        
+                        // 获取所有启用的标签
+                        $enabled_tabs = array();
+                        if(!empty($settings['latest_enabled'])) $enabled_tabs['latest'] = '最新文章';
+                        if(!empty($settings['updated_enabled'])) $enabled_tabs['updated'] = '最近更新';
+                        if(!empty($settings['popular_enabled'])) $enabled_tabs['popular'] = '热门文章';
+                        
+                        // 添加自定义标签
+                        $custom_tabs = get_option('article_custom_tabs', array());
+                        if(!empty($custom_tabs)) {
+                            foreach($custom_tabs as $index => $tab) {
+                                // 所有自定义标签默认启用
+                                $enabled_tabs['custom_'.$index] = $tab['title'];
+                            }
+                        }
+                        
+                        // 按保存的顺序显示标签
+                        // 如果没有保存的顺序，使用默认顺序
+                        if(empty($tabs_order)) {
+                            $tabs_order = array('latest', 'updated', 'popular');
+                        }
+
+                        foreach($tabs_order as $tab_id) {
+                            if(isset($enabled_tabs[$tab_id])) {
+                                echo sprintf(
+                                    '<li class="tab-item" data-id="%s"><span class="dashicons dashicons-menu"></span>%s</li>',
+                                    esc_attr($tab_id),
+                                    esc_html($enabled_tabs[$tab_id])
+                                );
+                                unset($enabled_tabs[$tab_id]);
+                            }
+                        }
+                        
+                        // 显示未排序的标签
+                        foreach($enabled_tabs as $tab_id => $tab_name) {
+                            echo sprintf(
+                                '<li class="tab-item" data-id="%s"><span class="dashicons dashicons-menu"></span>%s</li>',
+                                esc_attr($tab_id),
+                                esc_html($tab_name)
+                            );
+                        }
+                        ?>
+                    </ul>
+                    <div class="tabs-order-notice">
+                        <p>拖动标签可以调整显示顺序。排序不会影响标签的永久链接。</p>
+                    </div>
+                </div>
+            </div>
             
             <?php submit_button(); ?>
         </form>
@@ -307,8 +379,9 @@ function article_tabs_settings_page() {
             var newTab = $('<div class="custom-tab">' +
                 '<input type="text" name="article_custom_tabs[' + tabIndex + '][title]" class="regular-text" required>' +
                 '<textarea name="article_custom_tabs[' + tabIndex + '][content]" rows="3" class="large-text" required></textarea>' +
+                '<input type="hidden" name="article_custom_tabs[' + tabIndex + '][enabled]" value="1">' +
                 '<label><input type="checkbox" name="article_custom_tabs[' + tabIndex + '][login_required]" value="1">仅登录用户可见</label>' +
-                '<button type="button" class="button remove-tab">��除</button>' +
+                '<button type="button" class="button remove-tab">删除</button>' +
                 '</div>');
             $('#custom-tabs').append(newTab);
             tabIndex++;
@@ -340,16 +413,27 @@ function article_tabs_settings_page() {
     <?php
 }
 
-// 在保存设置时添加ID
+// 在保存设置时添加调试日志
 function save_article_tabs_settings($value) {
+    error_log('Saving article tabs settings: ' . print_r($value, true));
+    if(!is_array($value)) {
+        return array();
+    }
+    
     foreach ($value as $index => &$tab) {
         if (!isset($tab['id'])) {
             $tab['id'] = 'custom_' . $index;
         }
-        if (!isset($tab['login_required'])) {
-            $tab['login_required'] = 0;
-        }
+        // 设置默认值
+        $tab = array_merge(array(
+            'id' => 'custom_' . $index,
+            'login_required' => 0,
+            'enabled' => 1,
+            'title' => isset($tab['title']) ? $tab['title'] : '自定义标签 ' . ($index + 1),
+            'content' => isset($tab['content']) ? $tab['content'] : ''
+        ), $tab);
     }
+    error_log('Processed tabs: ' . print_r($value, true));
     return $value;
 }
 add_filter('pre_update_option_article_custom_tabs', 'save_article_tabs_settings');
@@ -381,7 +465,7 @@ function enqueue_article_tabs_admin_assets($hook) {
         true
     );
     
-    // 添加本地化数据
+    // 添加本地化数
     wp_localize_script('article-tabs-admin', 'articleTabsSettings', array(
         'nonce' => wp_create_nonce('article_tabs_settings'),
         'ajaxurl' => admin_url('admin-ajax.php')
