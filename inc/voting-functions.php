@@ -10,33 +10,63 @@ function create_voting_tables() {
     
     $charset_collate = $wpdb->get_charset_collate();
     
-    // 先删除旧表
-    $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}post_votes");
-    
-    // 创建新的投票表，修改唯一键约束
     $sql_votes = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}post_votes (
         id bigint(20) NOT NULL AUTO_INCREMENT,
         post_id bigint(20) NOT NULL,
+        revision_id bigint(20) NOT NULL,
         user_id bigint(20) NOT NULL,
-        vote_type tinyint(1) NOT NULL,
-        vote_for varchar(20) DEFAULT 'post',
-        is_admin_decision tinyint(1) DEFAULT 0,
+        vote_type tinyint(1) NOT NULL COMMENT '1为赞成,0为反对',
         vote_date datetime DEFAULT CURRENT_TIMESTAMP,
+        is_active tinyint(1) NOT NULL DEFAULT 1 COMMENT '1为有效,0为无效',
         PRIMARY KEY  (id),
-        UNIQUE KEY vote_unique (post_id, user_id, vote_for),
+        UNIQUE KEY vote_unique (post_id, revision_id, user_id, is_active),
         KEY post_id (post_id),
-        KEY user_id (user_id)
+        KEY revision_id (revision_id),
+        KEY user_id (user_id),
+        KEY is_active (is_active)
     ) $charset_collate;";
     
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql_votes);
+    
+    // 检查is_active字段是否存在,如果不存在则添加
+    $row = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}post_votes LIKE 'is_active'");
+    if (empty($row)) {
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}post_votes 
+                     ADD COLUMN is_active tinyint(1) NOT NULL DEFAULT 1 
+                     COMMENT '1为有效,0为无效'");
+    }
 }
 
 // 检查用户投票权限
-function check_user_voting_permission($user_id, $post_id) {
+function check_user_voting_permission($user_id, $post_id, $revision_id = 0) {
     // 检查用户是否已投票
-    if (get_user_vote($user_id, $post_id)) {
-        return new WP_Error('already_voted', '您已经对此文章投过票了');
+    global $wpdb;
+    
+    // 获取当前修改版本
+    $revision = get_post($post_id);
+    if (!$revision) {
+        return new WP_Error('invalid_post', '无效的文章');
+    }
+    
+    // 获取原文章ID
+    $parent_id = wp_get_post_parent_id($post_id);
+    $original_post_id = $parent_id ? $parent_id : $post_id;
+    
+    // 检查是否对当前版本投过有效票
+    $voted = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}post_votes 
+         WHERE user_id = %d 
+         AND post_id = %d
+         AND revision_id = %d
+         AND is_active = 1",  // 只检查有效的投票
+        $user_id,
+        $original_post_id,
+        $revision_id
+    ));
+    
+    if ($voted > 0) {
+        return new WP_Error('already_voted', '您已经对此版本投过票了');
     }
     
     // 检查注册时间
@@ -54,32 +84,120 @@ function check_user_voting_permission($user_id, $post_id) {
 }
 
 // 添加投票
-function add_vote($post_id, $user_id, $vote_type) {
+function add_vote($post_id, $vote) {
     global $wpdb;
+    $user_id = get_current_user_id();
     
-    $permission = check_user_voting_permission($user_id, $post_id);
+    // 获取当前文章的修改版本ID
+    $revision_id = get_post_meta($post_id, '_revision_id', true) ?: 0;
+    
+    // 获取原文章ID
+    $parent_id = wp_get_post_parent_id($post_id);
+    $original_post_id = $parent_id ? $parent_id : $post_id;
+    
+    // 检查投票权限
+    $permission = check_user_voting_permission($user_id, $post_id, $revision_id);
     if (is_wp_error($permission)) {
         return $permission;
     }
     
-    $result = $wpdb->insert(
-        $wpdb->prefix . 'post_votes',
-        array(
-            'post_id' => $post_id,
-            'user_id' => $user_id,
-            'vote_type' => $vote_type
-        ),
-        array('%d', '%d', '%d')
-    );
+    // 开始事务
+    $wpdb->query('START TRANSACTION');
     
-    if ($result === false) {
-        return new WP_Error('vote_failed', '投票失败');
+    try {
+        // 先删除该用户对该版本的所有投票记录
+        $wpdb->delete(
+            $wpdb->prefix . 'post_votes',
+            array(
+                'post_id' => $original_post_id,
+                'revision_id' => $revision_id,
+                'user_id' => $user_id
+            ),
+            array('%d', '%d', '%d')
+        );
+        
+        // 添加新的投票记录
+        $result = $wpdb->insert(
+            $wpdb->prefix . 'post_votes',
+            array(
+                'post_id' => $original_post_id,
+                'revision_id' => $revision_id,
+                'user_id' => $user_id,
+                'vote_type' => $vote,
+                'vote_date' => current_time('mysql'),
+                'is_active' => 1
+            ),
+            array('%d', '%d', '%d', '%d', '%s', '%d')
+        );
+        
+        if ($result === false) {
+            throw new Exception('投票失败');
+        }
+        
+        $wpdb->query('COMMIT');
+        
+        // 检查是否达到投票阈值
+        check_voting_threshold($post_id);
+        
+        return true;
+        
+    } catch (Exception $e) {
+        $wpdb->query('ROLLBACK');
+        return new WP_Error('vote_failed', $e->getMessage());
+    }
+}
+
+// 获取文章的投票统计
+function get_post_votes($post_id) {
+    global $wpdb;
+    
+    // 获取当前文章的修改版本ID和提交时间
+    $revision_id = get_post_meta($post_id, '_revision_id', true) ?: 0;
+    $revision = get_post($post_id);
+    $revision_date = $revision ? $revision->post_date : '';
+    
+    // 获取原文章ID
+    $parent_id = wp_get_post_parent_id($post_id);
+    $original_post_id = $parent_id ? $parent_id : $post_id;
+    
+    // 修改SQL查询,加入时间条件
+    $votes = $wpdb->get_row($wpdb->prepare(
+        "SELECT 
+            SUM(vote_type = 1) as approve,
+            SUM(vote_type = 0) as reject,
+            COUNT(*) as total
+        FROM {$wpdb->prefix}post_votes
+        WHERE post_id = %d 
+        AND revision_id = %d
+        AND vote_date >= %s
+        AND is_active = 1",
+        $original_post_id,
+        $revision_id,
+        $revision_date
+    ));
+    
+    // 添加错误处理和默认值
+    if ($votes === null || $wpdb->last_error) {
+        return array(
+            'approve' => 0,
+            'reject' => 0,
+            'total' => 0
+        );
     }
     
-    // 检查是否达到投票阈值
-    check_voting_threshold($post_id);
+    $result = array(
+        'approve' => (int)$votes->approve,
+        'reject' => (int)$votes->reject,
+        'total' => (int)$votes->total
+    );
     
-    return true;
+    // 添加额外信息
+    $required_votes = get_option('voting_votes_required', 10);
+    $result['remaining'] = max(0, $required_votes - $result['total']);
+    $result['approve_ratio'] = $result['total'] > 0 ? 
+        ($result['approve'] / $result['total']) : 0;
+    
+    return $result;
 }
 
 // 获取用户投票
@@ -95,28 +213,13 @@ function get_user_vote($user_id, $post_id) {
 
 // 检查投票阈值
 function check_voting_threshold($post_id) {
-    global $wpdb;
-    
     $required_votes = get_option('voting_votes_required', 10);
     $approve_ratio = get_option('voting_approve_ratio', 0.6);
     
-    $votes = $wpdb->get_results($wpdb->prepare(
-        "SELECT vote_type, COUNT(*) as count 
-         FROM {$wpdb->prefix}post_votes 
-         WHERE post_id = %d 
-         GROUP BY vote_type",
-        $post_id
-    ));
-    
-    $total_votes = 0;
-    $approve_votes = 0;
-    
-    foreach ($votes as $vote) {
-        $total_votes += $vote->count;
-        if ($vote->vote_type == 1) {
-            $approve_votes = $vote->count;
-        }
-    }
+    // 使用新版本的get_post_votes函数
+    $votes = get_post_votes($post_id);
+    $total_votes = $votes['total'];
+    $approve_votes = $votes['approve'];
     
     // 如果达到所需票数
     if ($total_votes >= $required_votes) {
@@ -165,17 +268,9 @@ function handle_vote() {
     
     $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
     $vote = isset($_POST['vote']) ? intval($_POST['vote']) : 0;
-    $vote_type = isset($_POST['vote_type']) ? sanitize_text_field($_POST['vote_type']) : '';
-    $user_id = get_current_user_id();
     
-    // 根据投票类型进行不同处理
-    if ($vote_type === 'edit') {
-        // 处理修改投票
-        $result = add_edit_vote($post_id, $user_id, $vote);
-    } else {
-        // 处理新文章投票
-        $result = add_vote($post_id, $user_id, $vote);
-    }
+    // 添加投票记录
+    $result = add_vote($post_id, $vote);
     
     if (is_wp_error($result)) {
         wp_send_json_error($result->get_error_message());
@@ -186,60 +281,15 @@ function handle_vote() {
 }
 add_action('wp_ajax_handle_vote', 'handle_vote');
 
-// 添加修改投票函数
-function add_edit_vote($post_id, $user_id, $vote_type) {
-    global $wpdb;
-    
-    $permission = check_user_voting_permission($user_id, $post_id);
-    if (is_wp_error($permission)) {
-        return $permission;
-    }
-    
-    $result = $wpdb->insert(
-        $wpdb->prefix . 'post_votes',
-        array(
-            'post_id' => $post_id,
-            'user_id' => $user_id,
-            'vote_type' => $vote_type,
-            'vote_for' => 'edit'
-        ),
-        array('%d', '%d', '%d', '%s')
-    );
-    
-    if ($result === false) {
-        return new WP_Error('vote_failed', '投票失败');
-    }
-    
-    // 检查是否达到投票阈值
-    check_edit_voting_threshold($post_id);
-    
-    return true;
-}
-
 // 添加修改投票阈值检查
 function check_edit_voting_threshold($post_id) {
-    global $wpdb;
-    
     $required_votes = get_option('voting_votes_required', 10);
     $approve_ratio = get_option('voting_approve_ratio', 0.6);
     
-    $votes = $wpdb->get_results($wpdb->prepare(
-        "SELECT vote_type, COUNT(*) as count 
-         FROM {$wpdb->prefix}post_votes 
-         WHERE post_id = %d AND vote_for = 'edit'
-         GROUP BY vote_type",
-        $post_id
-    ));
-    
-    $total_votes = 0;
-    $approve_votes = 0;
-    
-    foreach ($votes as $vote) {
-        $total_votes += $vote->count;
-        if ($vote->vote_type == 1) {
-            $approve_votes = $vote->count;
-        }
-    }
+    // 使用新版本的get_post_votes函数
+    $votes = get_post_votes($post_id);
+    $total_votes = $votes['total'];
+    $approve_votes = $votes['approve'];
     
     // 如果达到所需票数
     if ($total_votes >= $required_votes) {
@@ -281,54 +331,33 @@ function check_edit_voting_threshold($post_id) {
     }
 }
 
-// 获取文章的投票信息
-function get_post_votes($post_id) {
-    global $wpdb;
-    
-    $votes = $wpdb->get_results($wpdb->prepare(
-        "SELECT vote_type, COUNT(*) as count 
-         FROM {$wpdb->prefix}post_votes 
-         WHERE post_id = %d 
-         GROUP BY vote_type",
-        $post_id
-    ));
-    
-    $result = array(
-        'approve' => 0,
-        'reject' => 0,
-        'total' => 0
-    );
-    
-    foreach ($votes as $vote) {
-        if ($vote->vote_type == 1) {
-            $result['approve'] = (int)$vote->count;
-        } else {
-            $result['reject'] = (int)$vote->count;
-        }
-        $result['total'] += (int)$vote->count;
-    }
-    
-    // 计算还需要多少票
-    $required_votes = get_option('voting_votes_required', 10);
-    $result['remaining'] = max(0, $required_votes - $result['total']);
-    
-    // 计算当前成比例
-    $result['approve_ratio'] = $result['total'] > 0 ? 
-        ($result['approve'] / $result['total']) : 0;
-    
-    return $result;
-}
-
 // 获取投票用户列表
 function get_voting_users_list($post_id, $vote_type = null) {
     global $wpdb;
     
-    $sql = "SELECT v.*, u.display_name, v.vote_date 
+    // 获取当前文章的修改版本ID和提交时间
+    $revision_id = get_post_meta($post_id, '_revision_id', true) ?: 0;
+    $revision = get_post($post_id);
+    $revision_date = $revision ? $revision->post_date : '';
+    
+    // 获取原文章ID
+    $parent_id = wp_get_post_parent_id($post_id);
+    $original_post_id = $parent_id ? $parent_id : $post_id;
+    
+    // 修改SQL查询,只获取当前修改版本的投票记录
+    $sql = "SELECT DISTINCT v.*, u.display_name, v.vote_date 
             FROM {$wpdb->prefix}post_votes v 
             JOIN {$wpdb->users} u ON v.user_id = u.ID 
-            WHERE v.post_id = %d";
+            WHERE v.post_id = %d 
+            AND v.revision_id = %d
+            AND v.vote_date >= %s
+            AND v.is_active = 1";
     
-    $params = array($post_id);
+    $params = array(
+        $original_post_id,
+        $revision_id,
+        $revision_date
+    );
     
     if ($vote_type !== null) {
         $sql .= " AND v.vote_type = %d";
@@ -340,6 +369,11 @@ function get_voting_users_list($post_id, $vote_type = null) {
     $votes = $wpdb->get_results($wpdb->prepare($sql, $params));
     
     if (empty($votes)) {
+        if ($vote_type === 1) {
+            return '暂无赞成投票';
+        } elseif ($vote_type === 0) {
+            return '暂无反对投票';
+        }
         return '暂无投票记录';
     }
     
@@ -698,3 +732,54 @@ function get_revision_summary($revision_id) {
     
     return $summary ? $summary : '';
 }
+
+// 检查用户是否已对该文章投票
+function has_user_voted($post_id) {
+    global $wpdb;
+    $user_id = get_current_user_id();
+    
+    // 获取当前文章的修改版本ID和提交时间
+    $revision_id = get_post_meta($post_id, '_revision_id', true) ?: 0;
+    $revision = get_post($post_id);
+    $revision_date = $revision ? $revision->post_date : '';
+    
+    // 获取原文章ID
+    $parent_id = wp_get_post_parent_id($post_id);
+    $original_post_id = $parent_id ? $parent_id : $post_id;
+    
+    // 检查是否对当前版本投过票,加入时间条件
+    $voted = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}post_votes 
+        WHERE user_id = %d 
+        AND post_id = %d 
+        AND revision_id = %d
+        AND vote_date >= %s
+        AND is_active = 1",
+        $user_id,
+        $original_post_id,
+        $revision_id,
+        $revision_date
+    ));
+    
+    return $voted > 0;
+}
+
+// 在提交新修改版本时将旧投票标记为无效
+function deactivate_old_votes($post_id) {
+    global $wpdb;
+    
+    // 获取原文章ID
+    $parent_id = wp_get_post_parent_id($post_id);
+    $original_post_id = $parent_id ? $parent_id : $post_id;
+    
+    // 将该文章的所有投票标记为无效
+    $wpdb->query($wpdb->prepare(
+        "UPDATE {$wpdb->prefix}post_votes 
+         SET is_active = 0 
+         WHERE post_id = %d",
+        $original_post_id
+    ));
+}
+
+// 在保存修改版本时调用
+add_action('save_post_revision', 'deactivate_old_votes');

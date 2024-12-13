@@ -9,6 +9,51 @@ require_once get_template_directory() . '/inc/voting-functions.php';
 require_once get_template_directory() . '/inc/voting-settings.php';    
 require_once get_template_directory() . '/inc/back-to-top.php';
 
+// 添加主题版本号和升级函数
+function theme_upgrade_db() {
+    $current_version = get_option('theme_db_version', '0');
+    
+    if (version_compare($current_version, '1.1', '<')) {
+        global $wpdb;
+        
+        // 1. 备份现有表
+        $wpdb->query("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}post_votes_backup LIKE {$wpdb->prefix}post_votes");
+        $wpdb->query("INSERT INTO {$wpdb->prefix}post_votes_backup SELECT * FROM {$wpdb->prefix}post_votes");
+        
+        // 2. 修改表结构
+        $wpdb->query("
+            ALTER TABLE {$wpdb->prefix}post_votes 
+            ADD COLUMN revision_id bigint(20) NOT NULL DEFAULT 0 AFTER post_id,
+            CHANGE COLUMN vote_type vote_type tinyint(1) NOT NULL COMMENT '1为赞成,0为反对'
+        ");
+        
+        // 3. 删除旧的唯一键并添加新的
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}post_votes DROP INDEX vote_unique");
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}post_votes ADD UNIQUE KEY vote_unique (post_id, revision_id, user_id)");
+        
+        // 4. 添加索引
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}post_votes ADD INDEX revision_id (revision_id)");
+        
+        // 5. 清理旧的投票记录
+        $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}post_votes");
+        // 或者更新现有记录(如果要保留旧记录的话)
+        /*
+        $wpdb->query("
+            UPDATE {$wpdb->prefix}post_votes v 
+            JOIN {$wpdb->posts} p ON v.post_id = p.ID 
+            SET v.revision_id = 
+                CASE 
+                    WHEN p.post_type = 'revision' THEN p.ID
+                    ELSE 0
+                END
+        ");
+        */
+        
+        // 更新版本号
+        update_option('theme_db_version', '1.1');
+    }
+}
+
 // 主题激活时的处理函数
 function theme_activation() {
     // 创建必要的数据表
@@ -63,6 +108,9 @@ function theme_activation() {
     
     // 刷新重写规则
     flush_rewrite_rules();
+    
+    // 执行数据库升级
+    theme_upgrade_db();
 }
 add_action('after_switch_theme', 'theme_activation');
 
@@ -119,7 +167,7 @@ function my_theme_enqueue_scripts() {
     // 菜单样式
     wp_enqueue_style('menu-styles', get_template_directory_uri() . '/assets/css/menu.css', array(), '1.0.0', 'all');
 
-    // 根据页面类型加载对应的样式和脚本
+    // 根据页��类型加载对应的样式和脚本
     if (is_singular() && comments_open()) {
         wp_enqueue_style('comments-style', get_template_directory_uri() . '/assets/css/comments.css', array(), '1.0.1', 'all');
         wp_enqueue_script('comment-actions', get_template_directory_uri() . '/assets/js/comment-actions.js', array('jquery'), '1.0', true);
@@ -261,7 +309,7 @@ function optimize_post_pages() {
         wp_dequeue_style('wc-block-style');
         wp_dequeue_style('global-styles');
         
-        // 预加载
+        // 加载
         add_action('wp_head', function() {
             ?>
             <link rel="preload" href="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js" as="script">
@@ -294,7 +342,7 @@ add_action('template_redirect', 'ensure_correct_encoding');
 add_filter('wp_new_user_notification_email', '__return_false');
 add_filter('wp_new_user_notification_email_admin', '__return_false');
 
-// 检查菜单是否为空的函数
+// 检查菜单是否为��的函数
 function is_menu_empty($location) {
     $menu_locations = get_nav_menu_locations();
     if (isset($menu_locations[$location])) {
@@ -399,3 +447,11 @@ function render_markdown_content($content) {
     return $content;
 }
 add_filter('the_content', 'render_markdown_content');
+
+// 也可以在管理员访问后台时检查并执行升级
+function check_theme_upgrade() {
+    if (current_user_can('manage_options')) {
+        theme_upgrade_db();
+    }
+}
+add_action('admin_init', 'check_theme_upgrade');
