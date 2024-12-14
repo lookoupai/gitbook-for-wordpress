@@ -1,23 +1,76 @@
 jQuery(document).ready(function($) {
-    // 处理投票按钮点击
-    $('.vote-approve, .vote-reject').click(function() {
-        var $button = $(this);
-        var postId = $button.data('post-id');
-        var vote = $button.hasClass('vote-approve') ? 1 : 0;
-        var voteType = $button.data('type');
+    // 确保Modal对象存在
+    if (typeof bootstrap !== 'undefined') {
+        var voteModal = new bootstrap.Modal(document.getElementById('voteReasonModal'));
         
+        // 处理投票按钮点击
+        $('.vote-approve, .vote-reject').click(function(e) {
+            e.preventDefault(); // 阻止默认行为
+            var $button = $(this);
+            currentVoteData = {
+                postId: $button.data('post-id'),
+                vote: $button.hasClass('vote-approve') ? 1 : 0,
+                voteType: $button.data('type')
+            };
+
+            // 根据投票类型显示对应的预设理由
+            var isApprove = $button.hasClass('vote-approve');
+            $('.preset-reason-select option').show();
+            $('.preset-reason-select').val('');
+            $('.preset-reason-select ' + (isApprove ? '.reject-reason' : '.approve-reason')).hide();
+            
+            // 重置理由选择
+            $('.reason-type-select[value="preset"]').prop('checked', true);
+            $('.preset-reasons').show();
+            $('.custom-reason').hide();
+            $('.custom-reason-input').val('');
+
+            // 显示弹窗
+            voteModal.show();
+        });
+    } else {
+        console.error('Bootstrap is not loaded');
+    }
+
+    // 理由类型切换
+    $('.reason-type-select').on('change', function() {
+        if ($(this).val() === 'preset') {
+            $('.preset-reasons').show();
+            $('.custom-reason').hide();
+        } else {
+            $('.preset-reasons').hide();
+            $('.custom-reason').show();
+        }
+    });
+
+    // 处理确认投票
+    $('.submit-vote').click(function() {
+        if (!currentVoteData) return;
+
+        var reasonType = $('.reason-type-select:checked').val();
+        var reasonContent = reasonType === 'preset' 
+            ? $('.preset-reason-select').val()
+            : $('.custom-reason-input').val();
+        
+        if (!reasonContent) {
+            alert('请填写投票理由');
+            return;
+        }
+
         $.ajax({
             url: votingVars.ajaxurl,
             type: 'POST',
             data: {
                 action: 'handle_vote',
                 nonce: votingVars.nonce,
-                post_id: postId,
-                vote: vote,
-                vote_type: voteType
+                post_id: currentVoteData.postId,
+                vote: currentVoteData.vote,
+                vote_type: currentVoteData.voteType,
+                reason_type: reasonType,
+                reason_content: reasonContent
             },
             beforeSend: function() {
-                $button.prop('disabled', true);
+                $('.submit-vote').prop('disabled', true);
             },
             success: function(response) {
                 if (response.success) {
@@ -30,7 +83,8 @@ jQuery(document).ready(function($) {
                 alert('投票失败，请稍后重试');
             },
             complete: function() {
-                $button.prop('disabled', false);
+                $('.submit-vote').prop('disabled', false);
+                voteModal.hide();
             }
         });
     });
@@ -42,6 +96,7 @@ jQuery(document).ready(function($) {
         var decision = $button.hasClass('admin-approve') ? 1 : 0;
         var voteType = $button.data('type');
         
+        // 显示确认对话框
         if (confirm('确定要' + (decision ? '通过' : '拒绝') + '这篇' + (voteType === 'edit' ? '修改' : '文章') + '吗？')) {
             $.ajax({
                 url: votingVars.ajaxurl,

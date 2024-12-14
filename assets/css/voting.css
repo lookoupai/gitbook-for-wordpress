@@ -84,37 +84,39 @@
 }
 
 /* 投票按钮样式 */
-.user-voting button,
-.admin-actions button {
-    padding: 8px 20px;
+.voting-buttons {
+    margin: 10px 0;
+    display: flex;
+    gap: 10px;
+}
+
+.vote-approve, .vote-reject {
+    flex: 1;
+    padding: 8px 15px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    margin-right: 10px;
+    font-size: 14px;
     font-weight: bold;
     transition: background-color 0.2s;
 }
 
-.vote-approve,
-.admin-approve {
-    background: #4CAF50;
+.vote-approve {
+    background-color: #28a745;
     color: white;
 }
 
-.vote-reject,
-.admin-reject {
-    background: #f44336;
+.vote-reject {
+    background-color: #dc3545;
     color: white;
 }
 
-.vote-approve:hover,
-.admin-approve:hover {
-    background: #45a049;
+.vote-approve:hover {
+    background-color: #218838;
 }
 
-.vote-reject:hover,
-.admin-reject:hover {
-    background: #da190b;
+.vote-reject:hover {
+    background-color: #c82333;
 }
 
 /* 投票用户列表样式 */
@@ -194,8 +196,11 @@
         padding: 15px;
     }
 
-    .user-voting button,
-    .admin-actions button {
+    .voting-buttons {
+        flex-direction: column;
+    }
+
+    .vote-approve, .vote-reject {
         width: 100%;
         margin-bottom: 10px;
     }
@@ -226,7 +231,7 @@
     padding-bottom: 11px;
 }
 
-/* 修改说明样式 */
+/* ��改说明样式 */
 .edit-summary {
     display: block;
     margin-top: 10px;
@@ -431,69 +436,26 @@ table.diff .diff-addedline ins {
     }
 }
 
-.voting-buttons {
-    margin: 10px 0;
+/* 弹窗样式优化 */
+#voteReasonModal .modal-content {
+    border-radius: 8px;
 }
 
-.vote-approve, .vote-reject, .view-diff-btn {
-    padding: 8px 15px;
-    margin-right: 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
+#voteReasonModal .modal-header {
+    background: #f8f9fa;
+    border-radius: 8px 8px 0 0;
 }
 
-.vote-approve {
-    background-color: #28a745;
-    color: white;
+#voteReasonModal .reason-select {
+    margin-bottom: 20px;
 }
 
-.vote-reject {
-    background-color: #dc3545;
-    color: white;
+#voteReasonModal .form-check {
+    margin-bottom: 10px;
 }
 
-.view-diff-btn {
-    background-color: #17a2b8;
-    color: white;
-}
-
-/* 弹窗样式 */
-#diff-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 1000;
-}
-
-.modal-content {
-    position: relative;
-    background-color: #fff;
-    margin: 50px auto;
-    padding: 20px;
-    width: 80%;
-    max-width: 800px;
-    border-radius: 5px;
-}
-
-.modal-close {
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    font-size: 24px;
-    cursor: pointer;
-}
-
-.revision-diff {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+#voteReasonModal .custom-reason {
+    margin-top: 15px;
 }
 
 /* 禁用状态 */
@@ -524,4 +486,81 @@ button:disabled {
 
 .voting-announcement a:hover {
     color: #4a413e;
+}
+
+/* 投票表单样式 */
+.voting-form {
+    margin: 15px 0;
+    padding: 15px;
+    background: #f8f8f8;
+    border-radius: 4px;
+}
+
+.reason-select {
+    margin-bottom: 15px;
+}
+
+.reason-select label {
+    margin-right: 20px;
+    cursor: pointer;
+}
+
+.preset-reasons select,
+.custom-reason input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.voting-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.voting-actions button {
+    flex: 1;
+    padding: 8px 15px;
+}
+
+/* 管理员投票按钮样式 */
+.admin-actions {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.admin-approve, .admin-reject {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.admin-approve {
+    background: #4CAF50;
+    color: white;
+}
+
+.admin-reject {
+    background: #f44336;
+    color: white;
+}
+
+.admin-approve:hover {
+    background: #45a049;
+}
+
+.admin-reject:hover {
+    background: #da190b;
+}
+
+/* 禁用状态 */
+.admin-approve:disabled,
+.admin-reject:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 } 

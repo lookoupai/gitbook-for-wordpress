@@ -138,9 +138,22 @@ get_header();
                                     $permission_check = check_user_voting_permission($user_id, $post_id);
                                     if (!is_wp_error($permission_check)) : 
                                     ?>
-                                        <div class="user-voting">
-                                            <button class="vote-approve" data-post-id="<?php echo $post_id; ?>" data-type="<?php echo $vote_type; ?>">赞成</button>
-                                            <button class="vote-reject" data-post-id="<?php echo $post_id; ?>" data-type="<?php echo $vote_type; ?>">反对</button>
+                                        <div class="voting-buttons">
+                                            <?php if (!has_user_voted($post_id)) : ?>
+                                                <?php $permission_check = check_user_voting_permission(get_current_user_id(), $post_id); ?>
+                                                <?php if (!is_wp_error($permission_check)) : ?>
+                                                    <button class="vote-approve" data-post-id="<?php echo $post_id; ?>" data-type="<?php echo $vote_type; ?>">
+                                                        赞成
+                                                    </button>
+                                                    <button class="vote-reject" data-post-id="<?php echo $post_id; ?>" data-type="<?php echo $vote_type; ?>">
+                                                        反对
+                                                    </button>
+                                                <?php else : ?>
+                                                    <div class="voting-error">
+                                                        <?php echo esc_html($permission_check->get_error_message()); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
                                         </div>
                                     <?php else : ?>
                                         <div class="voting-error">
@@ -208,6 +221,56 @@ get_header();
     <div class="modal-content">
         <span class="close">&times;</span>
         <div id="diff-modal-content"></div>
+    </div>
+</div>
+
+<!-- 添加投票理由弹窗 -->
+<div class="modal fade" id="voteReasonModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">请选择投票理由</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="reason-select mb-3">
+                    <div class="form-check">
+                        <input type="radio" name="reason_type" class="form-check-input reason-type-select" value="preset" checked>
+                        <label class="form-check-label">选择预设理由</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="radio" name="reason_type" class="form-check-input reason-type-select" value="custom">
+                        <label class="form-check-label">自定义理由</label>
+                    </div>
+                </div>
+
+                <div class="preset-reasons">
+                    <select class="form-select preset-reason-select">
+                        <option value="">请选择理由</option>
+                        <?php
+                        $preset_reasons = get_option('voting_preset_reasons', array());
+                        foreach ($preset_reasons['approve'] as $key => $reason) : ?>
+                            <option value="<?php echo esc_attr($reason); ?>" class="approve-reason">
+                                <?php echo esc_html($reason); ?>
+                            </option>
+                        <?php endforeach; ?>
+                        <?php foreach ($preset_reasons['reject'] as $key => $reason) : ?>
+                            <option value="<?php echo esc_attr($reason); ?>" class="reject-reason">
+                                <?php echo esc_html($reason); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="custom-reason" style="display:none;">
+                    <input type="text" class="form-control custom-reason-input" placeholder="请输入投票理由(必填)" maxlength="200">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary submit-vote">确认投票</button>
+            </div>
+        </div>
     </div>
 </div>
 

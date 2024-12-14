@@ -11,11 +11,10 @@ require_once get_template_directory() . '/inc/back-to-top.php';
 
 // 添加主题版本号和升级函数
 function theme_upgrade_db() {
+    global $wpdb;
     $current_version = get_option('theme_db_version', '0');
     
     if (version_compare($current_version, '1.1', '<')) {
-        global $wpdb;
-        
         // 1. 备份现有表
         $wpdb->query("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}post_votes_backup LIKE {$wpdb->prefix}post_votes");
         $wpdb->query("INSERT INTO {$wpdb->prefix}post_votes_backup SELECT * FROM {$wpdb->prefix}post_votes");
@@ -52,13 +51,68 @@ function theme_upgrade_db() {
         // 更新版本号
         update_option('theme_db_version', '1.1');
     }
+
+    if (version_compare($current_version, '1.2', '<')) {
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        // 创建投票理由表
+        $sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}vote_reasons (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            post_id bigint(20) NOT NULL,
+            revision_id bigint(20) NOT NULL,
+            user_id bigint(20) NOT NULL,
+            reason_type varchar(20) NOT NULL DEFAULT 'preset',
+            reason_content text NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY post_revision_user (post_id, revision_id, user_id)
+        ) $charset_collate;";
+        
+        dbDelta($sql);
+        
+        // 添加预设理由选项
+        add_option('voting_preset_reasons', array(
+            'approve' => array(
+                'quality_content' => '优质内容',
+                'effective_edit' => '有效修改',
+                'well_formatted' => '格式规范'
+            ),
+            'reject' => array(
+                'poor_content' => '内容质量差',
+                'invalid_edit' => '无效修改',
+                'formatting_issues' => '格式问题'
+            )
+        ));
+        
+        update_option('theme_db_version', '1.2');
+    }
 }
 
 // 主题激活时的处理函数
 function theme_activation() {
+    global $wpdb;
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    
     // 创建必要的数据表
     create_notifications_table();  // 通知表
     create_voting_tables();       // 投票表
+    
+    // 创建投票理由表
+    $charset_collate = $wpdb->get_charset_collate();
+    $sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}vote_reasons (
+        id bigint(20) NOT NULL AUTO_INCREMENT,
+        post_id bigint(20) NOT NULL,
+        revision_id bigint(20) NOT NULL,
+        user_id bigint(20) NOT NULL,
+        reason_type varchar(20) NOT NULL DEFAULT 'preset',
+        reason_content text NOT NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY post_revision_user (post_id, revision_id, user_id)
+    ) $charset_collate;";
+    
+    dbDelta($sql);
     
     // 创建必要的页面
     $pages = array(
@@ -167,7 +221,7 @@ function my_theme_enqueue_scripts() {
     // 菜单样式
     wp_enqueue_style('menu-styles', get_template_directory_uri() . '/assets/css/menu.css', array(), '1.0.0', 'all');
 
-    // 根据页��类型加载对应的样式和脚本
+    // 根据页类型加载对应的样式和脚本
     if (is_singular() && comments_open()) {
         wp_enqueue_style('comments-style', get_template_directory_uri() . '/assets/css/comments.css', array(), '1.0.1', 'all');
         wp_enqueue_script('comment-actions', get_template_directory_uri() . '/assets/js/comment-actions.js', array('jquery'), '1.0', true);
@@ -338,11 +392,11 @@ function ensure_correct_encoding() {
 }
 add_action('template_redirect', 'ensure_correct_encoding');
 
-// 禁用新用户注册邮件通知
+// 禁用新用户注��邮件通知
 add_filter('wp_new_user_notification_email', '__return_false');
 add_filter('wp_new_user_notification_email_admin', '__return_false');
 
-// 检查菜单是否为��的函数
+// 检查菜单是否为空的函数
 function is_menu_empty($location) {
     $menu_locations = get_nav_menu_locations();
     if (isset($menu_locations[$location])) {
@@ -448,7 +502,7 @@ function render_markdown_content($content) {
 }
 add_filter('the_content', 'render_markdown_content');
 
-// 也可以在管理员访问后台时检查并执行升级
+// 也可以在管��员访问后台时检查并执行升级
 function check_theme_upgrade() {
     if (current_user_can('manage_options')) {
         theme_upgrade_db();

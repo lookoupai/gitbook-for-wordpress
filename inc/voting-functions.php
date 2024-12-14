@@ -84,7 +84,7 @@ function check_user_voting_permission($user_id, $post_id, $revision_id = 0) {
 }
 
 // 添加投票
-function add_vote($post_id, $vote) {
+function add_vote($post_id, $vote, $reason_type = '', $reason_content = '') {
     global $wpdb;
     $user_id = get_current_user_id();
     
@@ -132,6 +132,25 @@ function add_vote($post_id, $vote) {
         
         if ($result === false) {
             throw new Exception('投票失败');
+        }
+        
+        // 如果提供了投票理由,则保存理由
+        if ($reason_type && $reason_content) {
+            $reason_result = $wpdb->insert(
+                $wpdb->prefix . 'vote_reasons',
+                array(
+                    'post_id' => $original_post_id,
+                    'revision_id' => $revision_id,
+                    'user_id' => $user_id,
+                    'reason_type' => $reason_type,
+                    'reason_content' => $reason_content
+                ),
+                array('%d', '%d', '%d', '%s', '%s')
+            );
+            
+            if ($reason_result === false) {
+                throw new Exception('保存投票理由失败');
+            }
         }
         
         $wpdb->query('COMMIT');
@@ -268,9 +287,11 @@ function handle_vote() {
     
     $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
     $vote = isset($_POST['vote']) ? intval($_POST['vote']) : 0;
+    $reason_type = isset($_POST['reason_type']) ? sanitize_text_field($_POST['reason_type']) : '';
+    $reason_content = isset($_POST['reason_content']) ? sanitize_text_field($_POST['reason_content']) : '';
     
     // 添加投票记录
-    $result = add_vote($post_id, $vote);
+    $result = add_vote($post_id, $vote, $reason_type, $reason_content);
     
     if (is_wp_error($result)) {
         wp_send_json_error($result->get_error_message());
@@ -344,14 +365,32 @@ function get_voting_users_list($post_id, $vote_type = null) {
     $parent_id = wp_get_post_parent_id($post_id);
     $original_post_id = $parent_id ? $parent_id : $post_id;
     
-    // 修改SQL查询,只获取当前修改版本的投票记录
-    $sql = "SELECT DISTINCT v.*, u.display_name, v.vote_date 
-            FROM {$wpdb->prefix}post_votes v 
-            JOIN {$wpdb->users} u ON v.user_id = u.ID 
-            WHERE v.post_id = %d 
-            AND v.revision_id = %d
-            AND v.vote_date >= %s
-            AND v.is_active = 1";
+    // 检查表是否存在
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}vote_reasons'");
+    
+    // 基础查询
+    $sql = "SELECT DISTINCT v.*, u.display_name, v.vote_date";
+    
+    // 只有表存在时才关联查询
+    if ($table_exists) {
+        $sql .= ", r.reason_type, r.reason_content";
+    }
+    
+    $sql .= " FROM {$wpdb->prefix}post_votes v 
+              JOIN {$wpdb->users} u ON v.user_id = u.ID";
+    
+    if ($table_exists) {
+        $sql .= " LEFT JOIN {$wpdb->prefix}vote_reasons r ON (
+            v.post_id = r.post_id AND 
+            v.revision_id = r.revision_id AND 
+            v.user_id = r.user_id
+        )";
+    }
+    
+    $sql .= " WHERE v.post_id = %d 
+              AND v.revision_id = %d
+              AND v.vote_date >= %s
+              AND v.is_active = 1";
     
     $params = array(
         $original_post_id,
@@ -380,7 +419,13 @@ function get_voting_users_list($post_id, $vote_type = null) {
     $output = '';
     foreach ($votes as $vote) {
         $date = mysql2date('Y-m-d H:i:s', $vote->vote_date);
-        $output .= sprintf('%s (%s), ', esc_html($vote->display_name), esc_html($date));
+        $reason = ($table_exists && $vote->reason_content) ? 
+            sprintf('(%s)', esc_html($vote->reason_content)) : '';
+        $output .= sprintf('%s %s (%s), ', 
+            esc_html($vote->display_name),
+            $reason,
+            esc_html($date)
+        );
     }
     
     return rtrim($output, ', ');
@@ -664,7 +709,7 @@ function handle_admin_vote_decision() {
             
             add_user_notification(
                 $revision->post_author,
-                sprintf('您对文章《%s》的修改已被管理员拒绝', $parent_post->post_title),
+                sprintf('对文章《%s》的修改已被管理员拒绝', $parent_post->post_title),
                 'edit_rejected'
             );
         }
