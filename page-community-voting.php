@@ -11,7 +11,6 @@ if (!is_user_logged_in()) {
 
 get_header();
 ?>
-
 <div class="site-left-right-container">
     <div class='left-sidebar-container'>
         <?php require 'left-sidebar-pc.php'; ?>
@@ -108,7 +107,7 @@ get_header();
                                         <p><?php echo esc_html($edit_summary); ?></p>
                                     </div>
                                 <?php endif; ?>
-                                
+                                 
                                 <div class="diff-content" id="diff-<?php echo get_the_ID(); ?>" style="display:none;">
                                     <!-- 差异内容将通过AJAX加载 -->
                                 </div>
@@ -125,7 +124,7 @@ get_header();
                                 <span>赞成：<?php echo $votes['approve']; ?></span>
                                 <span>反对：<?php echo $votes['reject']; ?></span>
                             </div>
-                            
+                             
                             <?php if ($voting_status !== 'completed') : ?>
                                 <?php if (current_user_can('manage_options')) : ?>
                                     <div class="admin-actions">
@@ -181,7 +180,7 @@ get_header();
                         </div>
                     </article>
                 <?php endwhile; ?>
-
+                
                 <?php
                 // 分页
                 echo '<div class="pagination">';
@@ -211,7 +210,7 @@ get_header();
         <?php else : ?>
             <p class="no-posts">当前没有待投票的<?php echo $vote_type === 'edit' ? '修改' : '新文章'; ?></p>
         <?php endif; ?>
-
+        
         <?php require 'footer-container.php' ?>
     </main>
 </div>
@@ -235,12 +234,12 @@ get_header();
             <div class="modal-body">
                 <div class="reason-select mb-3">
                     <div class="form-check">
-                        <input type="radio" name="reason_type" class="form-check-input reason-type-select" value="preset" checked>
-                        <label class="form-check-label">选择预设理由</label>
+                        <input type="radio" id="preset-reason" name="reason_type" class="form-check-input reason-type-select" value="preset" checked>
+                        <label class="form-check-label" for="preset-reason">选择预设理由</label>
                     </div>
                     <div class="form-check">
-                        <input type="radio" name="reason_type" class="form-check-input reason-type-select" value="custom">
-                        <label class="form-check-label">自定义理由</label>
+                        <input type="radio" id="custom-reason" name="reason_type" class="form-check-input reason-type-select" value="custom">
+                        <label class="form-check-label" for="custom-reason">自定义理由</label>
                     </div>
                 </div>
 
@@ -274,4 +273,4 @@ get_header();
     </div>
 </div>
 
-<?php get_footer(); ?> 
+<?php get_footer(); ?>
