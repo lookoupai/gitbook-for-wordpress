@@ -43,6 +43,36 @@ jQuery(document).ready(function($) {
         }
     });
 
+    // 处理管理员决定按钮点击
+    $('.admin-approve, .admin-reject').click(function() {
+        var $button = $(this);
+        var postId = $button.data('post-id');
+        var decision = $button.hasClass('admin-approve') ? 1 : 0;
+        var voteType = $button.data('type');
+        
+        // 设置当前投票数据
+        currentVoteData = {
+            postId: postId,
+            vote: decision,
+            voteType: voteType
+        };
+
+        // 根据投票类型显示对应的预设理由
+        var isApprove = decision === 1;
+        $('.preset-reason-select option').show();
+        $('.preset-reason-select').val('');
+        $('.preset-reason-select ' + (isApprove ? '.reject-reason' : '.approve-reason')).hide();
+        
+        // 重置理由选择
+        $('.reason-type-select[value="preset"]').prop('checked', true);
+        $('.preset-reasons').show();
+        $('.custom-reason').hide();
+        $('.custom-reason-input').val('');
+
+        // 显示理由弹窗
+        voteModal.show();
+    });
+
     // 处理确认投票
     $('.submit-vote').click(function() {
         if (!currentVoteData) return;
@@ -57,18 +87,32 @@ jQuery(document).ready(function($) {
             return;
         }
 
+        // 检查是否是由管理员按钮触发的
+        var isAdminDecision = $(document.activeElement).hasClass('admin-approve') || 
+                            $(document.activeElement).hasClass('admin-reject');
+        var action = isAdminDecision ? 'admin_vote_decision' : 'handle_vote';
+        var data = isAdminDecision ? {
+            action: 'admin_vote_decision',
+            nonce: votingVars.nonce,
+            post_id: currentVoteData.postId,
+            decision: currentVoteData.vote,
+            vote_type: currentVoteData.voteType,
+            reason_type: reasonType,
+            reason_content: reasonContent
+        } : {
+            action: 'handle_vote',
+            nonce: votingVars.nonce,
+            post_id: currentVoteData.postId,
+            vote: currentVoteData.vote,
+            vote_type: currentVoteData.voteType,
+            reason_type: reasonType,
+            reason_content: reasonContent
+        };
+
         $.ajax({
             url: votingVars.ajaxurl,
             type: 'POST',
-            data: {
-                action: 'handle_vote',
-                nonce: votingVars.nonce,
-                post_id: currentVoteData.postId,
-                vote: currentVoteData.vote,
-                vote_type: currentVoteData.voteType,
-                reason_type: reasonType,
-                reason_content: reasonContent
-            },
+            data: data,
             beforeSend: function() {
                 $('.submit-vote').prop('disabled', true);
             },
@@ -80,52 +124,13 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function() {
-                alert('投票失败，请稍后重试');
+                alert('操作失败，请稍后重试');
             },
             complete: function() {
                 $('.submit-vote').prop('disabled', false);
                 voteModal.hide();
             }
         });
-    });
-
-    // 处理管理员决定按钮点击
-    $('.admin-approve, .admin-reject').click(function() {
-        var $button = $(this);
-        var postId = $button.data('post-id');
-        var decision = $button.hasClass('admin-approve') ? 1 : 0;
-        var voteType = $button.data('type');
-        
-        // 显示确认对话框
-        if (confirm('确定要' + (decision ? '通过' : '拒绝') + '这篇' + (voteType === 'edit' ? '修改' : '文章') + '吗？')) {
-            $.ajax({
-                url: votingVars.ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'admin_vote_decision',
-                    nonce: votingVars.nonce,
-                    post_id: postId,
-                    decision: decision,
-                    vote_type: voteType
-                },
-                beforeSend: function() {
-                    $button.prop('disabled', true);
-                },
-                success: function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        alert(response.data);
-                    }
-                },
-                error: function() {
-                    alert('操作失败，请稍后重试');
-                },
-                complete: function() {
-                    $button.prop('disabled', false);
-                }
-            });
-        }
     });
 
     // 处理查看差异按钮点击

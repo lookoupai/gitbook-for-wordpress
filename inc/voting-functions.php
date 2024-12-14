@@ -597,6 +597,8 @@ function handle_admin_vote_decision() {
     $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
     $decision = isset($_POST['decision']) ? intval($_POST['decision']) : 0;
     $vote_type = isset($_POST['vote_type']) ? sanitize_text_field($_POST['vote_type']) : '';
+    $reason_type = isset($_POST['reason_type']) ? sanitize_text_field($_POST['reason_type']) : '';
+    $reason_content = isset($_POST['reason_content']) ? sanitize_text_field($_POST['reason_content']) : '';
     
     if ($vote_type === 'edit') {
         // 处理修改投票
@@ -670,6 +672,21 @@ function handle_admin_vote_decision() {
                 );
             }
             
+            // 保存投票理由
+            if ($reason_type && $reason_content) {
+                $wpdb->insert(
+                    $wpdb->prefix . 'vote_reasons',
+                    array(
+                        'post_id' => $post_id,
+                        'revision_id' => $post_id,
+                        'user_id' => get_current_user_id(),
+                        'reason_type' => $reason_type,
+                        'reason_content' => $reason_content
+                    ),
+                    array('%d', '%d', '%d', '%s', '%s')
+                );
+            }
+            
             add_user_notification(
                 $revision->post_author,
                 sprintf('您对文章《%s》的修改已被管理员通过', $parent_post->post_title),
@@ -706,6 +723,21 @@ function handle_admin_vote_decision() {
                 ),
                 array('%d', '%d', '%d', '%s', '%d', '%s')
             );
+            
+            // 保存投票理由
+            if ($reason_type && $reason_content) {
+                $wpdb->insert(
+                    $wpdb->prefix . 'vote_reasons',
+                    array(
+                        'post_id' => $post_id,
+                        'revision_id' => $post_id,
+                        'user_id' => get_current_user_id(),
+                        'reason_type' => $reason_type,
+                        'reason_content' => $reason_content
+                    ),
+                    array('%d', '%d', '%d', '%s', '%s')
+                );
+            }
             
             add_user_notification(
                 $revision->post_author,
