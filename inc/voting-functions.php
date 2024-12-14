@@ -18,6 +18,7 @@ function create_voting_tables() {
         vote_type tinyint(1) NOT NULL COMMENT '1为赞成,0为反对',
         vote_date datetime DEFAULT CURRENT_TIMESTAMP,
         is_active tinyint(1) NOT NULL DEFAULT 1 COMMENT '1为有效,0为无效',
+        is_admin_decision tinyint(1) NOT NULL DEFAULT 0 COMMENT '1为管理员决定',
         PRIMARY KEY  (id),
         UNIQUE KEY vote_unique (post_id, revision_id, user_id, is_active),
         KEY post_id (post_id),
@@ -29,12 +30,20 @@ function create_voting_tables() {
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql_votes);
     
-    // 检查is_active字段是否存在,如果不存在则添加
-    $row = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->prefix}post_votes LIKE 'is_active'");
+    // 检查字段是否存在
+    $table_name = $wpdb->prefix . 'post_votes';
+    $row = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'is_active'");
     if (empty($row)) {
-        $wpdb->query("ALTER TABLE {$wpdb->prefix}post_votes 
+        $wpdb->query("ALTER TABLE $table_name 
                      ADD COLUMN is_active tinyint(1) NOT NULL DEFAULT 1 
                      COMMENT '1为有效,0为无效'");
+    }
+    
+    $row = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'is_admin_decision'");
+    if (empty($row)) {
+        $wpdb->query("ALTER TABLE $table_name 
+                     ADD COLUMN is_admin_decision tinyint(1) NOT NULL DEFAULT 0 
+                     COMMENT '1为管理员决定'");
     }
 }
 
@@ -69,15 +78,18 @@ function check_user_voting_permission($user_id, $post_id, $revision_id = 0) {
         return new WP_Error('already_voted', '您已经对此版本投过票了');
     }
     
-    // 检查注册时间
-    $min_months = get_option('voting_min_register_months', 3);
-    $user = get_userdata($user_id);
-    $register_date = strtotime($user->user_registered);
-    $months_diff = (time() - $register_date) / (30 * 24 * 60 * 60);
-    
-    if ($months_diff < $min_months) {
-        return new WP_Error('insufficient_time', 
-            sprintf('需要注册满%d个月才能参与投票', $min_months));
+    // 如果是管理员，跳过注册时间检查
+    if (!current_user_can('manage_options')) {
+        // 检查注册时间
+        $min_months = get_option('voting_min_register_months', 3);
+        $user = get_userdata($user_id);
+        $register_date = strtotime($user->user_registered);
+        $months_diff = (time() - $register_date) / (30 * 24 * 60 * 60);
+        
+        if ($months_diff < $min_months) {
+            return new WP_Error('insufficient_time', 
+                sprintf('需要注册满%d个月才能参与投票', $min_months));
+        }
     }
     
     return true;
@@ -125,9 +137,10 @@ function add_vote($post_id, $vote, $reason_type = '', $reason_content = '') {
                 'user_id' => $user_id,
                 'vote_type' => $vote,
                 'vote_date' => current_time('mysql'),
-                'is_active' => 1
+                'is_active' => 1,
+                'is_admin_decision' => current_user_can('manage_options') ? 1 : 0
             ),
-            array('%d', '%d', '%d', '%d', '%s', '%d')
+            array('%d', '%d', '%d', '%d', '%s', '%d', '%d')
         );
         
         if ($result === false) {
@@ -143,7 +156,7 @@ function add_vote($post_id, $vote, $reason_type = '', $reason_content = '') {
                     'revision_id' => $revision_id,
                     'user_id' => $user_id,
                     'reason_type' => $reason_type,
-                    'reason_content' => $reason_content
+                    'reason_content' => $reason_content . (current_user_can('manage_options') ? ' (管理员决定)' : '')
                 ),
                 array('%d', '%d', '%d', '%s', '%s')
             );
@@ -155,8 +168,86 @@ function add_vote($post_id, $vote, $reason_type = '', $reason_content = '') {
         
         $wpdb->query('COMMIT');
         
-        // 检查是否达到投票阈值
-        check_voting_threshold($post_id);
+        // 如果是管理员投票，直接决定结果
+        if (current_user_can('manage_options')) {
+            if ($vote == 1) {
+                // 通过
+                if ($parent_id) {
+                    // 如果是修改
+                    $revision = get_post($post_id);
+                    wp_update_post(array(
+                        'ID' => $parent_id,
+                        'post_title' => $revision->post_title,
+                        'post_content' => $revision->post_content,
+                        'post_status' => 'publish'
+                    ));
+                    
+                    // 更新修订版本状态
+                    update_post_meta($post_id, '_wp_revision_status', 'approved');
+                    wp_update_post(array(
+                        'ID' => $post_id,
+                        'post_status' => 'inherit'
+                    ));
+                    
+                    // 通知作者
+                    add_user_notification(
+                        $revision->post_author,
+                        sprintf('您对文章《%s》的修改已被管理员通过', get_the_title($parent_id)),
+                        'edit_approved'
+                    );
+                } else {
+                    // 如果是新文章
+                    wp_update_post(array(
+                        'ID' => $post_id,
+                        'post_status' => 'publish'
+                    ));
+                    
+                    // 通知作者
+                    $post = get_post($post_id);
+                    add_user_notification(
+                        $post->post_author,
+                        sprintf('您的文章《%s》已被管理员通过', $post->post_title),
+                        'post_approved'
+                    );
+                }
+            } else {
+                // 拒绝
+                if ($parent_id) {
+                    // 如果是修改
+                    // 更新修订版本状态
+                    update_post_meta($post_id, '_wp_revision_status', 'rejected');
+                    wp_update_post(array(
+                        'ID' => $post_id,
+                        'post_status' => 'inherit'
+                    ));
+                    
+                    // 通知作者
+                    $revision = get_post($post_id);
+                    add_user_notification(
+                        $revision->post_author,
+                        sprintf('您对文章《%s》的修改已被管理员拒绝', get_the_title($parent_id)),
+                        'edit_rejected'
+                    );
+                } else {
+                    // 如果是新文章
+                    wp_update_post(array(
+                        'ID' => $post_id,
+                        'post_status' => 'draft'
+                    ));
+                    
+                    // 通知作者
+                    $post = get_post($post_id);
+                    add_user_notification(
+                        $post->post_author,
+                        sprintf('您的文章《%s》已被管理员拒绝', $post->post_title),
+                        'post_rejected'
+                    );
+                }
+            }
+        } else {
+            // 普通用户投票，检查是否达到阈值
+            check_voting_threshold($post_id);
+        }
         
         return true;
         
@@ -184,7 +275,8 @@ function get_post_votes($post_id) {
         "SELECT 
             SUM(vote_type = 1) as approve,
             SUM(vote_type = 0) as reject,
-            COUNT(*) as total
+            COUNT(*) as total,
+            SUM(is_admin_decision) as admin_votes
         FROM {$wpdb->prefix}post_votes
         WHERE post_id = %d 
         AND revision_id = %d
@@ -200,14 +292,16 @@ function get_post_votes($post_id) {
         return array(
             'approve' => 0,
             'reject' => 0,
-            'total' => 0
+            'total' => 0,
+            'admin_votes' => 0
         );
     }
     
     $result = array(
         'approve' => (int)$votes->approve,
         'reject' => (int)$votes->reject,
-        'total' => (int)$votes->total
+        'total' => (int)$votes->total,
+        'admin_votes' => (int)$votes->admin_votes
     );
     
     // 添加额外信息
@@ -232,11 +326,15 @@ function get_user_vote($user_id, $post_id) {
 
 // 检查投票阈值
 function check_voting_threshold($post_id) {
+    // 如果已有管理员投票，不需要检查阈值
+    $votes = get_post_votes($post_id);
+    if ($votes['admin_votes'] > 0) {
+        return;
+    }
+    
     $required_votes = get_option('voting_votes_required', 10);
     $approve_ratio = get_option('voting_approve_ratio', 0.6);
     
-    // 使用新版本的get_post_votes函数
-    $votes = get_post_votes($post_id);
     $total_votes = $votes['total'];
     $approve_votes = $votes['approve'];
     
@@ -304,11 +402,15 @@ add_action('wp_ajax_handle_vote', 'handle_vote');
 
 // 添加修改投票阈值检查
 function check_edit_voting_threshold($post_id) {
+    // 如果已有管理员投票，不需要检查阈值
+    $votes = get_post_votes($post_id);
+    if ($votes['admin_votes'] > 0) {
+        return;
+    }
+    
     $required_votes = get_option('voting_votes_required', 10);
     $approve_ratio = get_option('voting_approve_ratio', 0.6);
     
-    // 使用新版本的get_post_votes函数
-    $votes = get_post_votes($post_id);
     $total_votes = $votes['total'];
     $approve_votes = $votes['approve'];
     
@@ -328,6 +430,9 @@ function check_edit_voting_threshold($post_id) {
                 'post_status' => 'publish'
             ));
             
+            // 更新修订状态
+            update_post_meta($post_id, '_wp_revision_status', 'approved');
+            
             // 通知作者
             add_user_notification(
                 $revision->post_author,
@@ -340,6 +445,9 @@ function check_edit_voting_threshold($post_id) {
                 'ID' => $post_id,
                 'post_status' => 'draft'
             ));
+            
+            // 更新修订状态
+            update_post_meta($post_id, '_wp_revision_status', 'rejected');
             
             // 通知作者
             $revision = get_post($post_id);
@@ -369,7 +477,7 @@ function get_voting_users_list($post_id, $vote_type = null) {
     $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}vote_reasons'");
     
     // 基础查询
-    $sql = "SELECT DISTINCT v.*, u.display_name, v.vote_date";
+    $sql = "SELECT DISTINCT v.*, u.display_name, v.vote_date, v.is_admin_decision";
     
     // 只有表存在时才关联查询
     if ($table_exists) {
@@ -403,7 +511,7 @@ function get_voting_users_list($post_id, $vote_type = null) {
         $params[] = $vote_type;
     }
     
-    $sql .= " ORDER BY v.vote_date DESC";
+    $sql .= " ORDER BY v.is_admin_decision DESC, v.vote_date DESC";
     
     $votes = $wpdb->get_results($wpdb->prepare($sql, $params));
     
@@ -421,8 +529,10 @@ function get_voting_users_list($post_id, $vote_type = null) {
         $date = mysql2date('Y-m-d H:i:s', $vote->vote_date);
         $reason = ($table_exists && $vote->reason_content) ? 
             sprintf('(%s)', esc_html($vote->reason_content)) : '';
-        $output .= sprintf('%s %s (%s), ', 
+        $admin_label = $vote->is_admin_decision ? '(管理员)' : '';
+        $output .= sprintf('%s%s %s (%s), ', 
             esc_html($vote->display_name),
+            $admin_label,
             $reason,
             esc_html($date)
         );
@@ -544,20 +654,27 @@ add_action('wp_enqueue_scripts', 'add_voting_assets');
 function get_pending_revisions_query() {
     return new WP_Query(array(
         'post_type' => 'revision',
-        'post_status' => 'inherit',  // 修改为 inherit
+        'post_status' => 'inherit',
         'posts_per_page' => 10,
         'orderby' => 'date',
         'order' => 'DESC',
         'meta_query' => array(
-            'relation' => 'OR',
+            'relation' => 'AND',
             array(
-                'key' => '_wp_revision_status',
-                'compare' => 'NOT EXISTS'
+                'relation' => 'OR',
+                array(
+                    'key' => '_wp_revision_status',
+                    'compare' => 'NOT EXISTS'
+                ),
+                array(
+                    'key' => '_wp_revision_status',
+                    'value' => array('approved', 'rejected'),
+                    'compare' => 'NOT IN'
+                )
             ),
             array(
-                'key' => '_wp_revision_status',
-                'value' => array('approved', 'rejected'),
-                'compare' => 'NOT IN'
+                'key' => '_edit_summary',
+                'compare' => 'EXISTS'
             )
         )
     ));
@@ -584,218 +701,6 @@ function get_revision_history($post_id) {
     
     return $revisions;
 }
-
-// 处理管理员投票决定
-function handle_admin_vote_decision() {
-    check_ajax_referer('voting-nonce', 'nonce');
-    
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error('没有权限执行此操作');
-        return;
-    }
-    
-    $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
-    $decision = isset($_POST['decision']) ? intval($_POST['decision']) : 0;
-    $vote_type = isset($_POST['vote_type']) ? sanitize_text_field($_POST['vote_type']) : '';
-    $reason_type = isset($_POST['reason_type']) ? sanitize_text_field($_POST['reason_type']) : '';
-    $reason_content = isset($_POST['reason_content']) ? sanitize_text_field($_POST['reason_content']) : '';
-    
-    if ($vote_type === 'edit') {
-        // 处理修改投票
-        $revision = get_post($post_id);
-        $parent_post = get_post($revision->post_parent);
-        
-        if ($decision) {
-            // 通过修改
-            wp_update_post(array(
-                'ID' => $parent_post->ID,
-                'post_title' => $revision->post_title,
-                'post_content' => $revision->post_content,
-                'post_status' => 'publish'
-            ));
-            
-            // 更新修订版本状态为已通过
-            wp_update_post(array(
-                'ID' => $post_id,
-                'post_status' => 'inherit'  // 改为 inherit 状态
-            ));
-            
-            // 标记修订为已处理
-            update_post_meta($post_id, '_wp_revision_status', 'approved');
-            
-            // 记录管理员决定
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'post_votes';
-            
-            // 检查表是否存在
-            if($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
-                create_voting_tables();
-            }
-            
-            // 检查是否已存在投票记录
-            $existing_vote = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM $table_name WHERE post_id = %d AND user_id = %d",
-                $post_id,
-                get_current_user_id()
-            ));
-
-            if ($existing_vote) {
-                // 更新现有记录
-                $wpdb->update(
-                    $table_name,
-                    array(
-                        'vote_type' => 1,
-                        'vote_for' => 'edit',
-                        'is_admin_decision' => 1,
-                        'vote_date' => current_time('mysql')
-                    ),
-                    array(
-                        'post_id' => $post_id,
-                        'user_id' => get_current_user_id()
-                    ),
-                    array('%d', '%s', '%d', '%s'),
-                    array('%d', '%d')
-                );
-            } else {
-                // 插入新记录
-                $wpdb->insert(
-                    $table_name,
-                    array(
-                        'post_id' => $post_id,
-                        'user_id' => get_current_user_id(),
-                        'vote_type' => 1,
-                        'vote_for' => 'edit',
-                        'is_admin_decision' => 1,
-                        'vote_date' => current_time('mysql')
-                    ),
-                    array('%d', '%d', '%d', '%s', '%d', '%s')
-                );
-            }
-            
-            // 保存投票理由
-            if ($reason_type && $reason_content) {
-                $wpdb->insert(
-                    $wpdb->prefix . 'vote_reasons',
-                    array(
-                        'post_id' => $post_id,
-                        'revision_id' => $post_id,
-                        'user_id' => get_current_user_id(),
-                        'reason_type' => $reason_type,
-                        'reason_content' => $reason_content
-                    ),
-                    array('%d', '%d', '%d', '%s', '%s')
-                );
-            }
-            
-            add_user_notification(
-                $revision->post_author,
-                sprintf('您对文章《%s》的修改已被管理员通过', $parent_post->post_title),
-                'edit_approved'
-            );
-        } else {
-            // 拒绝修改
-            wp_update_post(array(
-                'ID' => $post_id,
-                'post_status' => 'inherit'  // 改为 inherit 状态
-            ));
-            
-            // 标记修订为已处理
-            update_post_meta($post_id, '_wp_revision_status', 'rejected');
-            
-            // 记录管理员决定
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'post_votes';
-            
-            // 检查表是否存在和结构
-            if($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
-                create_voting_tables();
-            }
-            
-            $wpdb->insert(
-                $table_name,
-                array(
-                    'post_id' => $post_id,
-                    'user_id' => get_current_user_id(),
-                    'vote_type' => 0,
-                    'vote_for' => 'edit',
-                    'is_admin_decision' => 1,
-                    'vote_date' => current_time('mysql')
-                ),
-                array('%d', '%d', '%d', '%s', '%d', '%s')
-            );
-            
-            // 保存投票理由
-            if ($reason_type && $reason_content) {
-                $wpdb->insert(
-                    $wpdb->prefix . 'vote_reasons',
-                    array(
-                        'post_id' => $post_id,
-                        'revision_id' => $post_id,
-                        'user_id' => get_current_user_id(),
-                        'reason_type' => $reason_type,
-                        'reason_content' => $reason_content
-                    ),
-                    array('%d', '%d', '%d', '%s', '%s')
-                );
-            }
-            
-            add_user_notification(
-                $revision->post_author,
-                sprintf('对文章《%s》的修改已被管理员拒绝', $parent_post->post_title),
-                'edit_rejected'
-            );
-        }
-    } else {
-        // 处理新文章投票
-        $post = get_post($post_id);
-        if ($decision) {
-            wp_update_post(array(
-                'ID' => $post_id,
-                'post_status' => 'publish'
-            ));
-            
-            add_user_notification(
-                $post->post_author,
-                sprintf('您的文章《%s》已被管理员通过', $post->post_title),
-                'post_approved'
-            );
-        } else {
-            wp_update_post(array(
-                'ID' => $post_id,
-                'post_status' => 'draft'
-            ));
-            
-            add_user_notification(
-                $post->post_author,
-                sprintf('您的文章《%s》已被管理员拒绝', $post->post_title),
-                'post_rejected'
-            );
-        }
-    }
-    
-    wp_send_json_success('操作成功');
-}
-add_action('wp_ajax_admin_vote_decision', 'handle_admin_vote_decision');
-
-// 添加自定义修订状态
-function add_revision_statuses() {
-    register_post_status('approved-revision', array(
-        'label' => '已通过的修改',
-        'public' => false,
-        'exclude_from_search' => true,
-        'show_in_admin_all_list' => true,
-        'show_in_admin_status_list' => true
-    ));
-    
-    register_post_status('rejected-revision', array(
-        'label' => '已拒绝的修改',
-        'public' => false,
-        'exclude_from_search' => true,
-        'show_in_admin_all_list' => true,
-        'show_in_admin_status_list' => true
-    ));
-}
-add_action('init', 'add_revision_statuses');
 
 // 获取修改说明
 function get_revision_summary($revision_id) {
@@ -849,7 +754,7 @@ function deactivate_old_votes($post_id) {
     $parent_id = wp_get_post_parent_id($post_id);
     $original_post_id = $parent_id ? $parent_id : $post_id;
     
-    // 将该文章的所有投票标记为无效
+    // 将该文章的所有投票标
     $wpdb->query($wpdb->prepare(
         "UPDATE {$wpdb->prefix}post_votes 
          SET is_active = 0 
