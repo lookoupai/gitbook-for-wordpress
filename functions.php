@@ -8,6 +8,7 @@ require_once get_template_directory() . '/inc/post-editing.php';
 require_once get_template_directory() . '/inc/voting-functions.php';   
 require_once get_template_directory() . '/inc/voting-settings.php';    
 require_once get_template_directory() . '/inc/back-to-top.php';
+require_once get_template_directory() . '/inc/login-functions.php';    // 添加登录功能
 
 // 添加主题版本号和升级函数
 function theme_upgrade_db() {
@@ -35,18 +36,6 @@ function theme_upgrade_db() {
         
         // 5. 清理旧的投票记录
         $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}post_votes");
-        // 或者更新现有记录(如果要保留旧记录的话)
-        /*
-        $wpdb->query("
-            UPDATE {$wpdb->prefix}post_votes v 
-            JOIN {$wpdb->posts} p ON v.post_id = p.ID 
-            SET v.revision_id = 
-                CASE 
-                    WHEN p.post_type = 'revision' THEN p.ID
-                    ELSE 0
-                END
-        ");
-        */
         
         // 更新版本号
         update_option('theme_db_version', '1.1');
@@ -392,7 +381,7 @@ function ensure_correct_encoding() {
 }
 add_action('template_redirect', 'ensure_correct_encoding');
 
-// 禁用新用户注��邮件通知
+// 禁用新用户注册邮件通知
 add_filter('wp_new_user_notification_email', '__return_false');
 add_filter('wp_new_user_notification_email_admin', '__return_false');
 
@@ -502,7 +491,7 @@ function render_markdown_content($content) {
 }
 add_filter('the_content', 'render_markdown_content');
 
-// 也可以在管��员访问后台时检查并执行升级
+// 也可以在管理员访问后台时检查并执行升级
 function check_theme_upgrade() {
     if (current_user_can('manage_options')) {
         theme_upgrade_db();

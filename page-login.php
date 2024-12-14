@@ -20,13 +20,9 @@ get_header();
         <div class="login-container">
             <h2>用户登录</h2>
             
-            <?php if (isset($_GET['login']) && $_GET['login'] == 'failed'): ?>
-                <div class="error-message">
-                    用户名或密码错误，请重试。
-                </div>
-            <?php endif; ?>
+            <div class="error-message" style="display: none;"></div>
             
-            <form action="<?php echo esc_url(site_url('wp-login.php', 'login_post')); ?>" method="post">
+            <form id="login-form" method="post">
                 <div class="form-group">
                     <label for="user_login">用户名或邮箱</label>
                     <input type="text" name="log" id="user_login" required>
@@ -42,7 +38,6 @@ get_header();
                     <label for="rememberme">记住我</label>
                 </div>
                 
-                <input type="hidden" name="redirect_to" value="<?php echo esc_url(home_url()); ?>">
                 <button type="submit">登录</button>
             </form>
             
@@ -62,4 +57,13 @@ get_header();
     </main>
 </div>
 
-<?php get_footer(); ?> 
+<?php
+wp_enqueue_script('jquery');
+wp_enqueue_script('login-js', get_template_directory_uri() . '/assets/js/login.js', array('jquery'), '1.0', true);
+wp_localize_script('login-js', 'ajax_login_object', array(
+    'ajaxurl' => admin_url('admin-ajax.php'),
+    'security' => wp_create_nonce('ajax-login-nonce')
+));
+
+get_footer(); 
+?>
