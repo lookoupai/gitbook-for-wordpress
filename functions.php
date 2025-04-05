@@ -5,10 +5,10 @@ require_once get_template_directory() . '/inc/user-center-functions.php';
 require_once get_template_directory() . '/inc/comments.php';           // 评论功能
 require_once get_template_directory() . '/inc/post-submission.php';    
 require_once get_template_directory() . '/inc/post-editing.php';       
-require_once get_template_directory() . '/inc/voting-functions.php';   
-require_once get_template_directory() . '/inc/voting-settings.php';    
 require_once get_template_directory() . '/inc/back-to-top.php';
 require_once get_template_directory() . '/inc/login-functions.php';    // 添加登录功能
+require_once get_template_directory() . '/inc/ai-review-functions.php';  // AI审核功能
+require_once get_template_directory() . '/inc/ai-review-ajax.php';       // AI审核AJAX处理
 
 // 添加主题版本号和升级函数
 function theme_upgrade_db() {
@@ -16,65 +16,34 @@ function theme_upgrade_db() {
     $current_version = get_option('theme_db_version', '0');
     
     if (version_compare($current_version, '1.1', '<')) {
-        // 1. 备份现有表
-        $wpdb->query("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}post_votes_backup LIKE {$wpdb->prefix}post_votes");
-        $wpdb->query("INSERT INTO {$wpdb->prefix}post_votes_backup SELECT * FROM {$wpdb->prefix}post_votes");
-        
-        // 2. 修改表结构
-        $wpdb->query("
-            ALTER TABLE {$wpdb->prefix}post_votes 
-            ADD COLUMN revision_id bigint(20) NOT NULL DEFAULT 0 AFTER post_id,
-            CHANGE COLUMN vote_type vote_type tinyint(1) NOT NULL COMMENT '1为赞成,0为反对'
-        ");
-        
-        // 3. 删除旧的唯一键并添加新的
-        $wpdb->query("ALTER TABLE {$wpdb->prefix}post_votes DROP INDEX vote_unique");
-        $wpdb->query("ALTER TABLE {$wpdb->prefix}post_votes ADD UNIQUE KEY vote_unique (post_id, revision_id, user_id)");
-        
-        // 4. 添加索引
-        $wpdb->query("ALTER TABLE {$wpdb->prefix}post_votes ADD INDEX revision_id (revision_id)");
-        
-        // 5. 清理旧的投票记录
-        $wpdb->query("TRUNCATE TABLE {$wpdb->prefix}post_votes");
-        
-        // 更新版本号
+        // 此版本原本创建投票相关表，现已不需要
+        // 但仍保持版本号递增，避免重复执行升级
         update_option('theme_db_version', '1.1');
     }
 
     if (version_compare($current_version, '1.2', '<')) {
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        $charset_collate = $wpdb->get_charset_collate();
-        
-        // 创建投票理由表
-        $sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}vote_reasons (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
-            post_id bigint(20) NOT NULL,
-            revision_id bigint(20) NOT NULL,
-            user_id bigint(20) NOT NULL,
-            reason_type varchar(20) NOT NULL DEFAULT 'preset',
-            reason_content text NOT NULL,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY post_revision_user (post_id, revision_id, user_id)
-        ) $charset_collate;";
-        
-        dbDelta($sql);
-        
-        // 添加预设理由选项
-        add_option('voting_preset_reasons', array(
-            'approve' => array(
-                'quality_content' => '优质内容',
-                'effective_edit' => '有效修改',
-                'well_formatted' => '格式规范'
-            ),
-            'reject' => array(
-                'poor_content' => '内容质量差',
-                'invalid_edit' => '无效修改',
-                'formatting_issues' => '格式问题'
-            )
-        ));
-        
+        // 此版本原本更新投票理由表，现已不需要
+        // 但仍保持版本号递增，避免重复执行升级
         update_option('theme_db_version', '1.2');
+    }
+    
+    if (version_compare($current_version, '1.3', '<')) {
+        // 从投票系统升级到AI审核系统
+        // 确保创建必要的AI审核页面
+        $ai_review_page = get_page_by_path('ai-review');
+        if (!$ai_review_page) {
+            wp_insert_post(array(
+                'post_title' => 'AI内容审核',
+                'post_name' => 'ai-review',
+                'post_status' => 'publish',
+                'post_type' => 'page',
+                'post_content' => '',
+                'page_template' => 'page-ai-review.php'
+            ));
+        }
+        
+        // 更新版本号
+        update_option('theme_db_version', '1.3');
     }
 }
 
@@ -85,23 +54,6 @@ function theme_activation() {
     
     // 创建必要的数据表
     create_notifications_table();  // 通知表
-    create_voting_tables();       // 投票表
-    
-    // 创建投票理由表
-    $charset_collate = $wpdb->get_charset_collate();
-    $sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}vote_reasons (
-        id bigint(20) NOT NULL AUTO_INCREMENT,
-        post_id bigint(20) NOT NULL,
-        revision_id bigint(20) NOT NULL,
-        user_id bigint(20) NOT NULL,
-        reason_type varchar(20) NOT NULL DEFAULT 'preset',
-        reason_content text NOT NULL,
-        created_at datetime DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
-        KEY post_revision_user (post_id, revision_id, user_id)
-    ) $charset_collate;";
-    
-    dbDelta($sql);
     
     // 创建必要的页面
     $pages = array(
@@ -117,13 +69,13 @@ function theme_activation() {
             'title' => '编文章',
             'template' => 'page-edit-post.php'
         ),
-        'voting' => array(
-            'title' => '投票管理',
-            'template' => 'page-voting.php'
-        ),
         'article-tabs' => array(
             'title' => '文章标签页',
             'template' => 'page-article-tabs.php'
+        ),
+        'ai-review' => array(
+            'title' => 'AI内容审核',
+            'template' => 'page-ai-review.php'
         )
     );
     
@@ -143,11 +95,6 @@ function theme_activation() {
     
     // 创建默认菜单
     create_default_menus();
-    
-    // 设置默认选项
-    update_option('voting_votes_required', 10);    // 所需投票数
-    update_option('voting_approve_ratio', 0.6);    // 通过比例
-    update_option('voting_min_register_months', 3); // 最小注册月数
     
     // 刷新重写规则
     flush_rewrite_rules();
@@ -308,25 +255,6 @@ function create_default_menus() {
         set_theme_mod('nav_menu_locations', $locations);
     }
 }
-
-// URL重写
-function custom_login_url($login_url) {
-    $page = get_page_by_path('login');
-    return $page ? get_permalink($page) : $login_url;
-}
-add_filter('login_url', 'custom_login_url', 10, 1);
-
-function custom_register_url($register_url) {
-    $page = get_page_by_path('register');
-    return $page ? get_permalink($page) : $register_url;
-}
-add_filter('register_url', 'custom_register_url', 10, 1);
-
-function custom_lostpassword_url($lostpassword_url) {
-    $page = get_page_by_path('lost-password');
-    return $page ? get_permalink($page) : $lostpassword_url;
-}
-add_filter('lostpassword_url', 'custom_lostpassword_url', 10, 1);
 
 // 访问控制
 function check_user_center_access() {
@@ -498,3 +426,170 @@ function check_theme_upgrade() {
     }
 }
 add_action('admin_init', 'check_theme_upgrade');
+
+// 确保特定页面不受首页设置影响
+function exclude_pages_from_home($query) {
+    if ($query->is_home() && $query->is_main_query()) {
+        $query->set('post_type', 'post');
+        
+        // 排除用户中心等页面
+        $excluded_pages = array('user-center', 'login', 'register', 'lost-password');
+        $page_ids = array();
+        
+        foreach ($excluded_pages as $page_slug) {
+            $page = get_page_by_path($page_slug);
+            if ($page) {
+                $page_ids[] = $page->ID;
+            }
+        }
+        
+        if (!empty($page_ids)) {
+            $query->set('post__not_in', $page_ids);
+        }
+    }
+}
+add_action('pre_get_posts', 'exclude_pages_from_home');
+
+// 检查AI Services插件状态并显示通知
+function check_ai_services_plugin() {
+    // 仅对管理员显示
+    if (!current_user_can('administrator')) {
+        return;
+    }
+    
+    // 检查是否在管理页面
+    if (!is_admin()) {
+        return;
+    }
+    
+    // 添加详细调试信息
+    $debug_info = [];
+    $debug_info[] = '检查AI Services插件是否已安装和配置:';
+    $debug_info[] = '- function_exists(ai_services): ' . (function_exists('ai_services') ? 'true' : 'false');
+    
+    $screen = get_current_screen();
+    $plugin_status = '未知';
+    $has_available_services = false;
+    
+    if (function_exists('ai_services')) {
+        try {
+            $debug_info[] = '- ai_services()是否存在: ' . (ai_services() ? 'true' : 'false');
+            
+            // 检查当前用户是否有访问AI Services的权限
+            $debug_info[] = '- 当前用户是否有ais_access_services权限: ' . (current_user_can('ais_access_services') ? 'true' : 'false');
+            
+            try {
+                $has_available_services = ai_services()->has_available_services();
+                $debug_info[] = '- has_available_services(): ' . ($has_available_services ? 'true' : 'false');
+                $plugin_status = $has_available_services ? '已配置' : '未配置';
+                
+                // 尝试获取可用服务
+                $available_service = null;
+                try {
+                    $available_service = ai_services()->get_available_service();
+                    if ($available_service) {
+                        $debug_info[] = '- 成功获取可用服务: true';
+                        $plugin_status = '已配置且有可用服务';
+                        
+                        // 检查服务详情
+                        if (method_exists($available_service, 'get_name')) {
+                            $debug_info[] = '- 服务名称: ' . $available_service->get_name();
+                        }
+                        if (method_exists($available_service, 'get_label')) {
+                            $debug_info[] = '- 服务标签: ' . $available_service->get_label();
+                        }
+                        
+                        // 检查是否有文本生成能力
+                        if (method_exists($available_service, 'get_models')) {
+                            $models = $available_service->get_models();
+                            $debug_info[] = '- 可用模型数量: ' . count($models);
+                            
+                            // 检查是否至少有一个模型支持文本生成
+                            $has_text_generation = false;
+                            foreach ($models as $model) {
+                                if (method_exists($model, 'supports_text_generation') && $model->supports_text_generation()) {
+                                    $has_text_generation = true;
+                                    break;
+                                }
+                            }
+                            $debug_info[] = '- 是否有支持文本生成的模型: ' . ($has_text_generation ? 'true' : 'false');
+                        }
+                    } else {
+                        $debug_info[] = '- get_available_service()返回null';
+                    }
+                } catch (Exception $e) {
+                    $debug_info[] = '- 获取可用服务失败: ' . $e->getMessage();
+                }
+            } catch (Exception $e) {
+                $debug_info[] = '- 检查过程出错: ' . $e->getMessage();
+                $plugin_status = '配置出错';
+            }
+        } catch (Exception $e) {
+            $debug_info[] = '- 检查过程出错: ' . $e->getMessage();
+            $plugin_status = '异常';
+        }
+    } else {
+        $plugin_status = '未安装';
+    }
+    
+    // 记录调试信息到日志
+    if (current_user_can('administrator')) {
+        error_log('AI Services插件状态检查: ' . implode(' | ', $debug_info));
+        error_log('AI Services插件状态: ' . $plugin_status);
+    }
+    
+    // 检查AI Services插件状态并显示相应通知
+    if ($plugin_status == '未安装') {
+        // 排除插件安装页面，避免重复通知
+        if ($screen && $screen->id != 'plugin-install' && $screen->id != 'plugins') {
+            ?>
+            <div class="notice notice-info is-dismissible">
+                <p><strong>建议：</strong>您的主题包含AI文章审核功能，需要安装 <a href="https://wordpress.org/plugins/ai-services/" target="_blank">AI Services</a> 插件才能正常工作。</p>
+                <p>
+                    <a href="<?php echo esc_url(admin_url('plugin-install.php?s=ai-services&tab=search&type=term')); ?>" class="button button-primary">安装AI Services插件</a>
+                    <a href="<?php echo esc_url(admin_url('options-general.php?page=ai-review-settings')); ?>" class="button">查看AI审核设置</a>
+                </p>
+            </div>
+            <?php
+        }
+    } elseif ($plugin_status == '未配置' || $plugin_status == '配置出错') {
+        // 已安装但未配置或配置出错
+        // 排除AI Services设置页面，避免重复通知
+        if ($screen && $screen->id != 'settings_page_ai-services-settings') {
+            ?>
+            <div class="notice notice-info is-dismissible">
+                <p><strong>提示：</strong>您已安装AI Services插件，但<?php echo $plugin_status == '未配置' ? '尚未配置任何AI服务' : '配置可能有问题'; ?>。请完成配置以启用AI文章审核功能。</p>
+                <p>
+                    <a href="<?php echo esc_url(admin_url('options-general.php?page=ai-services-settings')); ?>" class="button button-primary">配置AI Services</a>
+                    <a href="<?php echo esc_url(admin_url('options-general.php?page=ai-review-settings')); ?>" class="button">查看AI审核设置</a>
+                </p>
+            </div>
+            <?php
+        }
+    } elseif ($plugin_status == '异常') {
+        // 插件可能安装有问题
+        ?>
+        <div class="notice notice-error is-dismissible">
+            <p><strong>AI Services插件错误：</strong>插件似乎已安装但无法正常工作。请尝试重新安装或更新插件。</p>
+            <p>
+                <a href="<?php echo esc_url(admin_url('plugins.php')); ?>" class="button button-primary">管理插件</a>
+                <a href="<?php echo esc_url(admin_url('options-general.php?page=ai-services-settings')); ?>" class="button">检查AI Services设置</a>
+            </p>
+        </div>
+        <?php
+    } elseif (function_exists('ai_services') && isset($e)) {
+        // 发生了异常但不确定具体原因
+        error_log('检查AI Services可用性时出错: ' . $e->getMessage());
+        
+        // 显示错误通知
+        ?>
+        <div class="notice notice-error is-dismissible">
+            <p><strong>AI Services插件错误：</strong><?php echo esc_html($e->getMessage()); ?></p>
+            <p>
+                <a href="<?php echo esc_url(admin_url('options-general.php?page=ai-services-settings')); ?>" class="button button-primary">检查AI Services设置</a>
+            </p>
+        </div>
+        <?php
+    }
+}
+add_action('admin_notices', 'check_ai_services_plugin');

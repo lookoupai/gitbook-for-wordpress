@@ -11,6 +11,28 @@ if (is_user_logged_in()) {
 get_header();
 ?>
 
+<style>
+.error-message {
+    display: none;
+    color: #dc3232;
+    background-color: #fdf2f2;
+    border: 1px solid #fde8e8;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.success-message {
+    display: none;
+    color: #0f5132;
+    background-color: #d1e7dd;
+    border: 1px solid #badbcc;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+</style>
+
 <div class="site-left-right-container">
     <div class='left-sidebar-container'>
         <?php require 'left-sidebar-pc.php'; ?>
@@ -21,22 +43,25 @@ get_header();
             <h2>用户登录</h2>
             
             <div class="error-message" style="display: none;"></div>
+            <div class="success-message" style="display: none;"></div>
             
-            <form id="login-form" method="post">
+            <form id="login-form" method="post" novalidate="novalidate">
                 <div class="form-group">
                     <label for="user_login">用户名或邮箱</label>
-                    <input type="text" name="log" id="user_login" required>
+                    <input type="text" name="username" id="user_login" required>
                 </div>
                 
                 <div class="form-group">
                     <label for="user_pass">密码</label>
-                    <input type="password" name="pwd" id="user_pass" required>
+                    <input type="password" name="password" id="user_pass" required>
                 </div>
                 
                 <div class="form-group">
                     <input type="checkbox" name="rememberme" id="rememberme">
                     <label for="rememberme">记住我</label>
                 </div>
+
+                <?php wp_nonce_field('ajax-login-nonce', 'security'); ?>
                 
                 <button type="submit">登录</button>
             </form>

@@ -56,6 +56,7 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'profile
                     <a href="?tab=comments" class="<?php echo $active_tab === 'comments' ? 'active' : ''; ?>">我的评论</a>
                     <a href="?tab=favorites" class="<?php echo $active_tab === 'favorites' ? 'active' : ''; ?>">我的收藏</a>
                     <a href="?tab=notifications" class="<?php echo $active_tab === 'notifications' ? 'active' : ''; ?>">消息通知</a>
+                    <a href="?tab=ai_reviews" class="<?php echo $active_tab === 'ai_reviews' ? 'active' : ''; ?>">AI审核历史</a>
                 </div>
 
                 <!-- Tab内容区 -->
@@ -126,6 +127,9 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'profile
                             break;
                         case 'notifications':
                             get_template_part('template-parts/user/notifications');
+                            break;
+                        case 'ai_reviews':
+                            get_template_part('template-parts/user/ai_reviews');
                             break;
                     }
                     ?>

@@ -6,16 +6,19 @@ jQuery(document).ready(function($) {
         var $form = $(this);
         var $submitButton = $form.find('button[type="submit"]');
         var $errorMessage = $('.error-message');
+        var $successMessage = $('.success-message');
         
-        // Clear previous error
+        // 清除之前的消息
         $errorMessage.empty().hide();
+        $successMessage.empty().hide();
         
-        // Disable submit button
-        $submitButton.prop('disabled', true);
+        // 禁用提交按钮并显示加载状态
+        $submitButton.prop('disabled', true).text('登录中...');
         
         $.ajax({
             url: ajax_login_object.ajaxurl,
             type: 'POST',
+            dataType: 'json',
             data: {
                 action: 'ajax_login',
                 username: $('#user_login').val(),
@@ -25,15 +28,25 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    window.location.href = response.data.redirect;
+                    // 登录成功
+                    $successMessage.html('登录成功，正在跳转...').show();
+                    setTimeout(function() {
+                        window.location.href = response.data.redirect;
+                    }, 1000);
                 } else {
+                    // 登录失败
                     $errorMessage.html(response.data.message).show();
-                    $submitButton.prop('disabled', false);
+                    $submitButton.prop('disabled', false).text('登录');
                 }
             },
-            error: function() {
-                $errorMessage.html('登录请求失败，请稍后重试。').show();
-                $submitButton.prop('disabled', false);
+            error: function(xhr, status, error) {
+                console.error('Ajax error:', status, error);
+                var errorMsg = '登录请求失败，请稍后重试。';
+                if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                    errorMsg = xhr.responseJSON.data.message;
+                }
+                $errorMessage.html(errorMsg).show();
+                $submitButton.prop('disabled', false).text('登录');
             }
         });
     });
@@ -47,16 +60,17 @@ jQuery(document).ready(function($) {
         var $errorMessage = $('.error-message');
         var $successMessage = $('.success-message');
         
-        // Clear previous messages
+        // 清除之前的消息
         $errorMessage.empty().hide();
         $successMessage.empty().hide();
         
-        // Disable submit button
-        $submitButton.prop('disabled', true);
+        // 禁用提交按钮并显示加载状态
+        $submitButton.prop('disabled', true).text('提交中...');
         
         $.ajax({
             url: ajax_login_object.ajaxurl,
             type: 'POST',
+            dataType: 'json',
             data: {
                 action: 'ajax_lostpassword',
                 user_login: $('#user_login').val(),
@@ -65,15 +79,20 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     $successMessage.html(response.data.message).show();
-                    $form.hide(); // 隐藏表单
+                    $form.hide();
                 } else {
                     $errorMessage.html(response.data.message).show();
                 }
-                $submitButton.prop('disabled', false);
+                $submitButton.prop('disabled', false).text('获取重置链接');
             },
-            error: function() {
-                $errorMessage.html('请求失败，请稍后重试。').show();
-                $submitButton.prop('disabled', false);
+            error: function(xhr, status, error) {
+                console.error('Ajax error:', status, error);
+                var errorMsg = '请求失败，请稍后重试。';
+                if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                    errorMsg = xhr.responseJSON.data.message;
+                }
+                $errorMessage.html(errorMsg).show();
+                $submitButton.prop('disabled', false).text('获取重置链接');
             }
         });
     });

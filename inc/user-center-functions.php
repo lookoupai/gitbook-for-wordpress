@@ -11,6 +11,27 @@ function require_login() {
     }
 }
 
+// 确保用户中心页面使用正确的模板
+function ensure_user_center_template($template) {
+    if (is_page('user-center') || strpos($_SERVER['REQUEST_URI'], '/user-center') !== false) {
+        $new_template = locate_template(array('page-user-center.php'));
+        if (!empty($new_template)) {
+            return $new_template;
+        }
+    }
+    return $template;
+}
+add_filter('template_include', 'ensure_user_center_template', 99);
+
+// 修改用户中心URL处理
+function fix_user_center_url($url, $path) {
+    if ($path === 'user-center') {
+        return home_url('/user-center/');
+    }
+    return $url;
+}
+add_filter('page_link', 'fix_user_center_url', 10, 2);
+
 // 处理个人资料更新
 function handle_profile_update() {
     if (!isset($_POST['profile_nonce']) || 

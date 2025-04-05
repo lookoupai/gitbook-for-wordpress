@@ -45,6 +45,14 @@ get_header();
                 // 评论部分
                 comments_template(); 
                 ?>
+
+                <?php 
+                // 显示AI审核信息（如果有）
+                $ai_review_score = get_post_meta(get_the_ID(), '_ai_review_score', true);
+                if (!empty($ai_review_score) && current_user_can('administrator')) {
+                    echo display_ai_review_results(get_the_ID());
+                }
+                ?>
             </article>
 
         <?php endwhile; ?>
