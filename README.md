@@ -41,6 +41,7 @@ GitBook For WordPress
    - 评论管理：查看、编辑自己发表的评论
    - 收藏功能：收藏感兴趣的文章
    - 消息通知：系统通知、评论回复等提醒
+   - AI审核历史：查看个人文章的AI审核结果
 
 4. 文章标签页
    - 多标签文章列表：最新文章、最近修改、热门文章等
@@ -55,6 +56,17 @@ GitBook For WordPress
    - 首页支持：可设置为首页并保持URL结构
    - 权限跳转：未登录访问受限标签自动跳转登录
    - 返回功能：登录后自动返回原来的标签页
+
+5. AI内容审核系统
+   - 自动审核：新文章和修改自动进行AI质量评估
+   - 质量评分：对内容进行1-10分的质量打分
+   - 详细反馈：提供具体的内容改进建议
+   - 自动批准：可设置达到分数阈值自动批准内容
+   - 管理界面：专门的AI审核管理页面
+   - 用户反馈：在用户中心显示AI审核结果
+   - 手动触发：支持管理员手动触发AI审核
+   - 内容比对：支持文章修订版本的内容对比
+   - 可配置性：灵活的审核标准和阈值设置
 
 ## 使用说明
 
@@ -104,6 +116,30 @@ GitBook For WordPress
    - 已登录用户可以看到所有标签
    - 权限设置即时生效
 
+### AI内容审核配置
+
+1. 安装依赖插件：
+   - 安装 [AI Services](https://wordpress.org/plugins/ai-services/) 插件
+   - 在插件设置中配置API密钥（支持Google Gemini、OpenAI等）
+
+2. 配置审核设置：
+   - 进入 设置 > AI审核设置
+   - 启用或禁用AI审核功能
+   - 设置最低通过分数（1-10分）
+   - 选择是否自动批准达到分数的内容
+   - 配置审核提示词和评估标准
+
+3. 创建审核页面：
+   - 新建页面并选择"AI审核页面"模板
+   - 设置适当的页面权限（建议仅管理员可见）
+   - 访问此页面可查看所有待审核内容
+
+4. 使用方法：
+   - 新文章提交后自动进行AI审核
+   - 用户可在用户中心查看自己文章的审核状态
+   - 管理员可在AI审核页面手动触发审核
+   - 达到设定分数的内容可自动批准或等待手动批准
+
 ### 用户权限设置
 
 1. 文章权限：
@@ -114,6 +150,11 @@ GitBook For WordPress
    - 用户可以编辑自己的评论
    - 评论修改后需要重新审核
    - 管理员可以直接编辑和删除任何评论
+
+3. 审核权限：
+   - 普通用户只能查看自己内容的审核结果
+   - 管理员可以查看和管理所有审核内容
+   - 只有管理员可以手动批准或拒绝内容
 
 ### Markdown 使用
 
@@ -148,6 +189,7 @@ GitBook For WordPress
 | POST VIEWS COUNTER | 查看文章阅读量 | http://www.dfactory.eu/plugins/post-views-counter/ |
 | WP Super Cache | 对WordPress页面进行静态页缓存 | https://wordpress.org/plugins/wp-super-cache/ |
 | instant.page | 用户鼠标滑到超链接时, 预加载网页 | https://wordpress.org/plugins/instant-page/ |
+| AI Services | 提供AI审核功能的API连接 | https://wordpress.org/plugins/ai-services/ |
 
 ## 开发小技巧
 
@@ -178,9 +220,16 @@ ln -s /path/to/your/theme /path/to/wordpress/wp-content/themes/your-theme
    - 确认RSS短代码格式正确
    - 清除浏览器缓存和主题缓存
 
+5. AI审核功能不工作
+   - 确认AI Services插件已安装并启用
+   - 检查API密钥是否配置正确
+   - 确认审核设置已正确保存
+   - 查看WordPress错误日志获取详细信息
+
 ## 致谢
 
 感谢 [@zhaoolee](https://github.com/zhaoolee) 开发的原始主题，本主题在其基础上添加了用户系统等功能。
+感谢 WordPress 团队开发的 [AI Services](https://wordpress.org/plugins/ai-services/) 插件，为主题提供了AI功能支持。
 
 ## 许可证
 
