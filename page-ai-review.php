@@ -3,8 +3,9 @@
  * Template Name: AI审核页面
  */
 
-// 添加调试信息
-if (current_user_can('administrator')) {
+// 仅在开启调试模式时添加调试信息
+$debug_mode = isset($_GET['debug_ai']) && current_user_can('administrator');
+if ($debug_mode && current_user_can('administrator')) {
     error_log('正在加载AI审核页面模板');
     error_log('当前主题目录: ' . get_template_directory());
     error_log('当前主题URL: ' . get_template_directory_uri());
@@ -21,8 +22,8 @@ $auto_approve = $settings['auto_approve'];
 // 获取待处理的修改和文章
 $query = get_pending_content_query();
 
-// 添加调试信息，记录查询结果
-if (current_user_can('administrator')) {
+// 仅在调试模式下记录查询结果
+if ($debug_mode && current_user_can('administrator')) {
     error_log('AI审核页面 - 查询结果: 找到 ' . $query->found_posts . ' 篇文章');
     
     // 输出查询SQL
@@ -58,6 +59,14 @@ if (current_user_can('administrator')) {
         <div class="ai-review-page">
             <div class="page-header mb-4">
                 <h1 class="page-title">AI内容审核</h1>
+                
+                <?php if (current_user_can('administrator')): ?>
+                <div class="admin-tools mb-2">
+                    <a href="<?php echo admin_url('tools.php?page=ai-services-diagnostics'); ?>" class="btn btn-sm btn-outline-secondary">AI服务诊断</a>
+                    <a href="<?php echo admin_url('options-general.php?page=ai-review-settings'); ?>" class="btn btn-sm btn-outline-secondary">审核设置</a>
+                    <a href="<?php echo add_query_arg('debug_ai', '1'); ?>" class="btn btn-sm btn-outline-secondary">开启调试模式</a>
+                </div>
+                <?php endif; ?>
                 
                 <?php if (!$ai_enabled): ?>
                 <div class="alert alert-warning">

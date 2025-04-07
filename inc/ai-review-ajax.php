@@ -49,8 +49,33 @@ function ajax_trigger_manual_ai_review() {
         wp_send_json_error(array('message' => 'AI Services插件未安装'));
     }
     
-    // 检查AI服务可用性
-    if (!ai_services()->has_available_services()) {
+    // 检查AI服务可用性 - 使用缓存机制
+    $cache_key = 'ajax_ai_service_check';
+    $force_check = isset($_GET['force_check']);
+    $service_available = false;
+    
+    if (!$force_check) {
+        $cached_result = get_transient($cache_key);
+        if ($cached_result !== false) {
+            $service_available = $cached_result;
+        }
+    }
+    
+    // 如果没有缓存或强制检查，执行检查
+    if ($cached_result === false || $force_check) {
+        try {
+            $service_available = ai_services()->has_available_services();
+            // 缓存结果5分钟，减少频繁检查
+            set_transient($cache_key, $service_available, 5 * MINUTE_IN_SECONDS);
+        } catch (Exception $e) {
+            if (current_user_can('administrator')) {
+                error_log('检查AI服务可用性出错: ' . $e->getMessage());
+            }
+            $service_available = false;
+        }
+    }
+    
+    if (!$service_available) {
         if (current_user_can('administrator')) {
             error_log('手动审核失败: 无可用的AI服务');
         }

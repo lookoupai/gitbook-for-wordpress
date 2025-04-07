@@ -462,7 +462,24 @@ function check_ai_services_plugin() {
         return;
     }
     
-    // 添加详细调试信息
+    // 使用缓存避免频繁检查
+    $cache_key = 'ai_services_plugin_check';
+    $force_check = isset($_GET['force_ai_check']);
+    
+    if (!$force_check) {
+        $cached_result = get_transient($cache_key);
+        if ($cached_result !== false) {
+            // 使用缓存结果
+            $plugin_status = $cached_result['plugin_status'];
+            $has_available_services = $cached_result['has_available_services'];
+            $debug_info = $cached_result['debug_info'];
+            
+            // 如果返回了缓存结果，直接跳到显示通知的部分
+            goto display_notices;
+        }
+    }
+    
+    // 没有缓存或强制检查，执行检查
     $debug_info = [];
     $debug_info[] = '检查AI Services插件是否已安装和配置:';
     $debug_info[] = '- function_exists(ai_services): ' . (function_exists('ai_services') ? 'true' : 'false');
@@ -471,72 +488,94 @@ function check_ai_services_plugin() {
     $plugin_status = '未知';
     $has_available_services = false;
     
-    if (function_exists('ai_services')) {
-        try {
-            $debug_info[] = '- ai_services()是否存在: ' . (ai_services() ? 'true' : 'false');
+    // 使用get_ai_services_detailed_status函数获取服务状态（如果可用）
+    if (function_exists('get_ai_services_detailed_status')) {
+        // 使用统一的检查函数
+        $services_status = get_ai_services_detailed_status();
+        
+        $has_available_services = $services_status['has_ai_services'];
+        $plugin_status = $has_available_services ? '已配置且有可用服务' : '未配置';
+        
+        $debug_info[] = '- ai_services()是否存在: ' . ($services_status['details']['service_object_valid'] ? 'true' : 'false');
+        $debug_info[] = '- 当前用户是否有ais_access_services权限: ' . (current_user_can('ais_access_services') ? 'true' : 'false');
+        $debug_info[] = '- has_available_services(): ' . ($has_available_services ? 'true' : 'false');
+        
+        if (!empty($services_status['available_services'])) {
+            $debug_info[] = '- 成功获取可用服务: true';
             
-            // 检查当前用户是否有访问AI Services的权限
-            $debug_info[] = '- 当前用户是否有ais_access_services权限: ' . (current_user_can('ais_access_services') ? 'true' : 'false');
-            
+            // 记录服务信息
+            foreach ($services_status['available_services'] as $service) {
+                $debug_info[] = '- 服务名称: ' . $service['name'];
+                $debug_info[] = '- 服务标签: ' . $service['label'];
+            }
+        } else {
+            if ($has_available_services) {
+                $debug_info[] = '- 服务可用但未获取到详情';
+            } else {
+                $debug_info[] = '- 没有可用服务';
+            }
+        }
+        
+        if (!empty($services_status['details']['error'])) {
+            $debug_info[] = '- 错误: ' . $services_status['details']['error'];
+            $plugin_status = '配置出错';
+        }
+    } else {
+        // 回退到旧的检查方式
+        if (function_exists('ai_services')) {
             try {
-                $has_available_services = ai_services()->has_available_services();
-                $debug_info[] = '- has_available_services(): ' . ($has_available_services ? 'true' : 'false');
-                $plugin_status = $has_available_services ? '已配置' : '未配置';
+                $debug_info[] = '- ai_services()是否存在: ' . (ai_services() ? 'true' : 'false');
                 
-                // 尝试获取可用服务
-                $available_service = null;
+                // 检查当前用户是否有访问AI Services的权限
+                $debug_info[] = '- 当前用户是否有ais_access_services权限: ' . (current_user_can('ais_access_services') ? 'true' : 'false');
+                
                 try {
-                    $available_service = ai_services()->get_available_service();
-                    if ($available_service) {
-                        $debug_info[] = '- 成功获取可用服务: true';
-                        $plugin_status = '已配置且有可用服务';
-                        
-                        // 检查服务详情
-                        if (method_exists($available_service, 'get_name')) {
-                            $debug_info[] = '- 服务名称: ' . $available_service->get_name();
+                    $has_available_services = ai_services()->has_available_services();
+                    $debug_info[] = '- has_available_services(): ' . ($has_available_services ? 'true' : 'false');
+                    $plugin_status = $has_available_services ? '已配置' : '未配置';
+                    
+                    // 尝试获取可用服务
+                    $available_service = null;
+                    try {
+                        $available_service = ai_services()->get_available_service();
+                        if ($available_service) {
+                            $debug_info[] = '- 成功获取可用服务: true';
+                            $plugin_status = '已配置且有可用服务';
+                        } else {
+                            $debug_info[] = '- get_available_service()返回null';
                         }
-                        if (method_exists($available_service, 'get_label')) {
-                            $debug_info[] = '- 服务标签: ' . $available_service->get_label();
-                        }
-                        
-                        // 检查是否有文本生成能力
-                        if (method_exists($available_service, 'get_models')) {
-                            $models = $available_service->get_models();
-                            $debug_info[] = '- 可用模型数量: ' . count($models);
-                            
-                            // 检查是否至少有一个模型支持文本生成
-                            $has_text_generation = false;
-                            foreach ($models as $model) {
-                                if (method_exists($model, 'supports_text_generation') && $model->supports_text_generation()) {
-                                    $has_text_generation = true;
-                                    break;
-                                }
-                            }
-                            $debug_info[] = '- 是否有支持文本生成的模型: ' . ($has_text_generation ? 'true' : 'false');
-                        }
-                    } else {
-                        $debug_info[] = '- get_available_service()返回null';
+                    } catch (Exception $e) {
+                        $debug_info[] = '- 获取可用服务失败: ' . $e->getMessage();
                     }
                 } catch (Exception $e) {
-                    $debug_info[] = '- 获取可用服务失败: ' . $e->getMessage();
+                    $debug_info[] = '- 检查过程出错: ' . $e->getMessage();
+                    $plugin_status = '配置出错';
                 }
             } catch (Exception $e) {
                 $debug_info[] = '- 检查过程出错: ' . $e->getMessage();
-                $plugin_status = '配置出错';
+                $plugin_status = '异常';
             }
-        } catch (Exception $e) {
-            $debug_info[] = '- 检查过程出错: ' . $e->getMessage();
-            $plugin_status = '异常';
+        } else {
+            $plugin_status = '未安装';
         }
-    } else {
-        $plugin_status = '未安装';
     }
     
-    // 记录调试信息到日志
-    if (current_user_can('administrator')) {
+    // 缓存结果10分钟
+    $cache_data = array(
+        'plugin_status' => $plugin_status,
+        'has_available_services' => $has_available_services,
+        'debug_info' => $debug_info
+    );
+    set_transient($cache_key, $cache_data, 10 * MINUTE_IN_SECONDS);
+    
+    // 记录调试信息到日志（仅记录一次）
+    if (isset($_GET['debug_ai']) || $force_check) {
         error_log('AI Services插件状态检查: ' . implode(' | ', $debug_info));
         error_log('AI Services插件状态: ' . $plugin_status);
     }
+    
+    // 显示通知的标签
+    display_notices:
     
     // 检查AI Services插件状态并显示相应通知
     if ($plugin_status == '未安装') {
@@ -562,6 +601,9 @@ function check_ai_services_plugin() {
                 <p>
                     <a href="<?php echo esc_url(admin_url('options-general.php?page=ai-services-settings')); ?>" class="button button-primary">配置AI Services</a>
                     <a href="<?php echo esc_url(admin_url('options-general.php?page=ai-review-settings')); ?>" class="button">查看AI审核设置</a>
+                    <?php if (current_user_can('administrator')): ?>
+                    <a href="<?php echo esc_url(admin_url('tools.php?page=ai-services-diagnostics')); ?>" class="button">AI服务诊断</a>
+                    <?php endif; ?>
                 </p>
             </div>
             <?php
